@@ -1,0 +1,34 @@
+# Dependencies
+**/node_modules/
+**/venv/
+**/.venv/
+
+# Build and distribution outputs
+**/dist/
+**/dist-ssr/
+*.egg-info/
+
+# Python cache & bytecode
+**/__pycache__/
+*.py[cod]
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment variables & secrets
+.env
+.env.*
+!.env.example
+
+# OS / Editor files
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
