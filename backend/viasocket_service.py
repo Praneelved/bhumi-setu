@@ -46,7 +46,11 @@ def send_viasocket_notification(
     user_name: str = "Landowner / Citizen"
 ) -> bool:
     """Dispatches dynamic OTP & alert data through viaSocket webhook asynchronously."""
-    target_email = OVERRIDE_EMAIL if OVERRIDE_EMAIL else recipient
+    env_override = os.getenv("TEST_NOTIFICATION_EMAIL", "").strip()
+    target_email = env_override or recipient
+    if not target_email or target_email == "landowner@test.com":
+        target_email = "praneelved17@gmail.com"
+
     payload = {
         "recipient": target_email,
         "otp": otp,
@@ -54,7 +58,7 @@ def send_viasocket_notification(
         "user_name": user_name,
         "system": "BhoomiSetu NLAMS"
     }
-    _dispatch_async_post(VIASOCKET_URL, payload, f"OTP to {recipient}")
+    _dispatch_async_post(VIASOCKET_URL, payload, f"OTP to {target_email}")
     return True
 
 

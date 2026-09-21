@@ -177,7 +177,7 @@ export async function verifyMfa(session_id: string, otp: string): Promise<AuthSe
   return data;
 }
 
-export async function personalSendOtp(identifier: string): Promise<{ success: boolean; session_id: string; message: string; dev_otp?: string }> {
+export async function personalSendOtp(identifier: string): Promise<{ success: boolean; session_id: string; message: string; dev_otp?: string; recipient_email?: string }> {
   const res = await fetch(`${API_BASE}/api/auth/personal/send-otp`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

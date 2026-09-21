@@ -110,11 +110,12 @@ def verify_otp_session(session_id: str, submitted_otp: str, purpose: str) -> Dic
         conn.close()
         raise HTTPException(status_code=429, detail="Maximum verification attempts exceeded. Please restart login.")
 
-    # Verify hash (allow 123456 in dev mode)
+    # Verify hash (allow 123456 or dev mock OTP in dev mode)
     salt, expected_hash = sess["otp_hash"].split('$')
     calc_hash = binascii.hexlify(hashlib.pbkdf2_hmac('sha256', submitted_otp.strip().encode(), salt.encode(), 50000)).decode('ascii')
 
-    if calc_hash != expected_hash and submitted_otp.strip() != "123456":
+    dev_allowed_otps = {"123456", "839201", os.getenv("DEV_MOCK_OTP", "").strip()}
+    if calc_hash != expected_hash and (IS_PRODUCTION or submitted_otp.strip() not in dev_allowed_otps):
         cursor.execute("UPDATE otp_sessions SET attempts = attempts + 1 WHERE id = %s;", (session_id,))
         conn.commit()
         conn.close()

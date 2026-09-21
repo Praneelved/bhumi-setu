@@ -198,6 +198,7 @@ export async function sendPersonalOTP(request: PersonalAuthSendRequest): Promise
   session_id: string;
   message: string;
   dev_otp?: string;
+  recipient_email?: string;
 }> {
   let cleanMobile = request.mobileNumber.replace(/\D/g, '');
   if (cleanMobile.length === 12 && cleanMobile.startsWith('91')) {
@@ -214,7 +215,8 @@ export async function sendPersonalOTP(request: PersonalAuthSendRequest): Promise
     success: res.success,
     session_id: res.session_id,
     message: res.message,
-    dev_otp: res.dev_otp
+    dev_otp: res.dev_otp,
+    recipient_email: res.recipient_email
   };
 }
 

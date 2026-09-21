@@ -386,6 +386,9 @@ def personal_send_otp(req: PersonalSendOtpRequest, request: Request):
 
     # Dispatch OTP via viaSocket webhook (email delivery)
     recipient_email = user["email"] if user.get("email") else identifier
+    if not recipient_email or recipient_email == "landowner@test.com":
+        recipient_email = os.getenv("TEST_NOTIFICATION_EMAIL", "praneelved17@gmail.com")
+
     send_viasocket_notification(
         recipient=recipient_email,
         otp=otp_data["dev_otp"],
@@ -399,7 +402,8 @@ def personal_send_otp(req: PersonalSendOtpRequest, request: Request):
     return {
         "success": True,
         "session_id": otp_data["session_id"],
-        "message": f"Login OTP dispatched to {identifier}",
+        "message": f"Login OTP dispatched to {recipient_email}",
+        "recipient_email": recipient_email,
         "dev_otp": None if IS_PRODUCTION else otp_data["dev_otp"]
     }
 
