@@ -192,7 +192,9 @@ function App() {
         >
           <Route element={<AuthenticatedLayout />}>
             <Route path="/personal/dashboard" element={<PersonalDashboard />} />
+            <Route path="/personal/documents" element={<PersonalDashboard initialTab="DOCUMENTS" />} />
             <Route path="/personal/documents/upload" element={<DocumentUploadPage />} />
+            <Route path="/personal/documents/upload/:docSlug" element={<DocumentUploadPage />} />
           </Route>
         </Route>
 

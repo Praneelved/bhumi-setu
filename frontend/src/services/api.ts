@@ -457,6 +457,75 @@ export async function fetchParcelAcquisitionContext(parcelId: string): Promise<a
   return res.json();
 }
 
+// --- Landowner Specific GIS APIs ---
+export interface LandownerGISSummary {
+  total_parcels: number;
+  total_area_ha: number;
+  under_acquisition: number;
+  completed: number;
+}
+
+export interface LandownerParcelDetail {
+  id: string;
+  survey_number: string;
+  khasra_number: string;
+  owner_name: string;
+  ownership_percentage: string;
+  area_ha: number;
+  address?: string;
+  village: string;
+  taluka: string;
+  municipality: string;
+  district: string;
+  state: string;
+  pin_code?: string;
+  pincode?: string;
+  latitude?: number;
+  longitude?: number;
+  centroid_lat: number;
+  centroid_lng: number;
+  location_precision?: string;
+  project_name: string;
+  project_id?: string;
+  project_code?: string;
+  acquisition_case_id: string;
+  acquisition_status: string;
+  compensation_formatted: string;
+  payment_status: string;
+  possession_status?: string;
+  sensitive_zone_overlap?: {
+    has_overlap: boolean;
+    zone_type?: string;
+    affected_area_ha?: number;
+    disclaimer?: string;
+  };
+}
+
+export async function fetchLandownerGisSummary(): Promise<LandownerGISSummary> {
+  const res = await fetch(`${API_BASE}/api/personal/gis/summary`, {
+    headers: authHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch landowner GIS summary');
+  return res.json();
+}
+
+export async function fetchLandownerGisParcels(search?: string): Promise<GISFeatureCollection> {
+  const qs = search ? `?search=${encodeURIComponent(search)}` : '';
+  const res = await fetch(`${API_BASE}/api/personal/gis/parcels${qs}`, {
+    headers: authHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch landowner GIS parcels');
+  return res.json();
+}
+
+export async function fetchLandownerGisParcelDetail(parcelId: string): Promise<LandownerParcelDetail> {
+  const res = await fetch(`${API_BASE}/api/personal/gis/parcels/${encodeURIComponent(parcelId)}`, {
+    headers: authHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch landowner parcel detail');
+  return res.json();
+}
+
 // --- 7. Compensations ---
 export async function fetchCaseCompensations(caseId: string): Promise<CompensationRecord[]> {
   const res = await fetch(`${API_BASE}/api/compensation/${encodeURIComponent(caseId)}`, {

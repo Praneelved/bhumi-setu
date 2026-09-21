@@ -4,17 +4,24 @@ import binascii
 import datetime
 from typing import Optional, List, Dict, Any
 
-import psycopg2
-import psycopg2.extras
 from dotenv import load_dotenv
 
 load_dotenv()
 
-POSTGRES_HOST = os.getenv("POSTGRES_HOST", "10.166.218.49")
+POSTGRES_HOST = os.getenv("POSTGRES_HOST", "127.0.0.1")
 POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5432")
 POSTGRES_USER = os.getenv("POSTGRES_USER", "postgres")
 POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "")
 POSTGRES_DB = os.getenv("POSTGRES_DB", "land_acquisition_db")
+
+# ── SQLite fallback flag ──
+_USE_SQLITE = False
+
+try:
+    import psycopg2
+    import psycopg2.extras
+except ImportError:
+    _USE_SQLITE = True
 
 def hash_password(password: str) -> str:
     """Hashes password with PBKDF2-HMAC-SHA256 and a secure salt."""
@@ -43,16 +50,25 @@ def verify_password(stored_password_hash: str, provided_password: str) -> bool:
     return pwdhash_hex == stored_hash
 
 def get_db():
-    conn = psycopg2.connect(
-        host=POSTGRES_HOST,
-        port=POSTGRES_PORT,
-        user=POSTGRES_USER,
-        password=POSTGRES_PASSWORD,
-        dbname=POSTGRES_DB,
-        cursor_factory=psycopg2.extras.RealDictCursor,
-        connect_timeout=5
-    )
-    return conn
+    global _USE_SQLITE
+    if not _USE_SQLITE:
+        try:
+            conn = psycopg2.connect(
+                host=POSTGRES_HOST,
+                port=POSTGRES_PORT,
+                user=POSTGRES_USER,
+                password=POSTGRES_PASSWORD,
+                dbname=POSTGRES_DB,
+                cursor_factory=psycopg2.extras.RealDictCursor,
+                connect_timeout=3
+            )
+            return conn
+        except Exception as e:
+            print(f"[WARN] PostgreSQL unavailable ({e}), switching to SQLite fallback.")
+            _USE_SQLITE = True
+    # SQLite fallback
+    from sqlite_compat import get_sqlite_db
+    return get_sqlite_db()
 
 def _column_exists(cursor, table: str, column: str) -> bool:
     cursor.execute("""
@@ -403,6 +419,102 @@ def init_db():
     except Exception:
         pass
 
+    # 18. VERIFICATION TABLES (District / State / Central workflow & Landowner verification)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS verification_cases (
+        id VARCHAR(64) PRIMARY KEY,
+        project_id VARCHAR(64),
+        project_name VARCHAR(255) NOT NULL,
+        agency VARCHAR(255) NOT NULL,
+        state VARCHAR(100) NOT NULL,
+        district VARCHAR(100) NOT NULL,
+        total_parcels INTEGER DEFAULT 1,
+        affected_families INTEGER DEFAULT 1,
+        submitted_date VARCHAR(50) NOT NULL,
+        current_stage VARCHAR(50) NOT NULL DEFAULT 'DISTRICT_COLLECTOR',
+        workflow_status VARCHAR(60) NOT NULL DEFAULT 'DISTRICT_DOCUMENT_VERIFICATION_PENDING',
+        overall_status VARCHAR(50) NOT NULL DEFAULT 'IN_PROGRESS',
+        stages_json TEXT NOT NULL,
+        district_data TEXT NOT NULL,
+        state_data TEXT NOT NULL,
+        central_data TEXT NOT NULL,
+        active_rejection TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS verification_documents (
+        id VARCHAR(64) PRIMARY KEY,
+        case_id VARCHAR(64) NOT NULL,
+        doc_number VARCHAR(32) NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        type VARCHAR(100) NOT NULL,
+        status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+        total_pages INTEGER DEFAULT 1,
+        pages_json TEXT NOT NULL DEFAULT '[]',
+        uploaded_date VARCHAR(50) NOT NULL,
+        uploaded_by VARCHAR(100) DEFAULT 'Landowner',
+        version INTEGER DEFAULT 1,
+        verified_at VARCHAR(50),
+        verified_by VARCHAR(100),
+        rejection_category TEXT,
+        rejection_reason TEXT,
+        rejection_remarks TEXT,
+        required_correction TEXT,
+        rejected_at VARCHAR(50),
+        rejected_by VARCHAR(100),
+        required_for_stage TEXT NOT NULL DEFAULT '["DISTRICT_COLLECTOR"]',
+        history_json TEXT DEFAULT '[]',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+
+    # Migration: Add history_json to verification_documents if not present
+    try:
+        cursor.execute("ALTER TABLE verification_documents ADD COLUMN history_json TEXT DEFAULT '[]';")
+    except Exception:
+        pass
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS verification_audit_logs (
+        id VARCHAR(64) PRIMARY KEY,
+        case_id VARCHAR(64) NOT NULL,
+        timestamp VARCHAR(50) NOT NULL,
+        authority_level VARCHAR(50) NOT NULL,
+        authority_title VARCHAR(255) NOT NULL,
+        officer_name VARCHAR(255) NOT NULL,
+        officer_id VARCHAR(64) NOT NULL,
+        action VARCHAR(50) NOT NULL,
+        document_id VARCHAR(64),
+        document_title VARCHAR(255),
+        check_id VARCHAR(64),
+        previous_status VARCHAR(50),
+        new_status VARCHAR(50),
+        reason TEXT,
+        remarks TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS landowner_notifications (
+        id VARCHAR(64) PRIMARY KEY,
+        case_id VARCHAR(64) NOT NULL,
+        recipient VARCHAR(255) NOT NULL,
+        document_id VARCHAR(64),
+        document_name VARCHAR(255),
+        authority VARCHAR(50) NOT NULL,
+        rejection_reason TEXT,
+        officer_remarks TEXT,
+        required_correction TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        is_read INTEGER DEFAULT 0
+    );
+    """)
+
     conn.commit()
 
     # ── 6. Seed data if users table is empty ──
@@ -718,7 +830,7 @@ def seed_gis_and_payment_data(conn):
 
     cursor.executemany("""
     INSERT INTO land_parcels (
-        id, survey_number, khasra_number, village, taluka, district, state,
+        id, survey_number, khasra_number, village, taluk, district, state,
         project_id, project_name, acquisition_case_id, owner_id, owner_name, owner_contact,
         land_classification, area_ha, area_sqm,
         acquisition_status, compensation_status, possession_status,
@@ -759,11 +871,14 @@ def seed_gis_and_payment_data(conn):
     cursor.executemany("""
     INSERT INTO compensations (
         id, case_id, parcel_id, beneficiary_id, beneficiary_name,
-        bank_account_masked, ifsc_code, market_value_lakh, solatium_amount_lakh,
-        additional_interest_lakh, total_amount_lakh, total_amount_cr, status,
-        assessed_by, approved_by, approved_at
-    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT DO NOTHING;
-    """, compensations_data)
+        base_market_value, multiplication_factor, market_value_total, solatium_amount,
+        assets_attached_value, total_award_amount, status,
+        approved_by, approval_date
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING;
+    """, [
+        (r[0], r[1], r[2], r[3], r[4], r[6]*100000, 1.0, r[7]*100000, r[8]*100000, r[9]*100000, r[10]*100000, r[12], r[14], r[15])
+        for r in compensations_data
+    ])
 
     # Seed Payments
     p1_audit = json.dumps([
@@ -794,13 +909,20 @@ def seed_gis_and_payment_data(conn):
 
     cursor.executemany("""
     INSERT INTO payments (
-        id, case_id, compensation_id, beneficiary_id, beneficiary_name,
-        amount_rs, payment_type, status, payment_reference, payment_provider,
-        initiated_by, initiated_at, processed_at, credited_at, failure_reason,
-        retry_count, created_at, updated_at,
-        bank_account_masked, ifsc_code, urn_number
-    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT DO NOTHING;
-    """, payments_data)
+        id, compensation_id, case_id, parcel_id, beneficiary_id, beneficiary_name,
+        bank_account_mask, bank_ifsc, bank_name, amount, payment_channel,
+        payment_reference, batch_id, status,
+        initiated_by, initiated_at, credited_at, audit_trail_json
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING;
+    """, [
+        (
+            r[0], r[2], r[1], "P-001" if r[0]=="PAY-2026-001" else "P-003", r[3], r[4],
+            r[18], r[19], "State Bank of India" if "SBIN" in r[19] else "Bank of Maharashtra",
+            r[5], r[6], r[8], r[20], r[7],
+            r[10], r[11], r[13], None
+        )
+        for r in payments_data
+    ])
 
     conn.commit()
     seed_gis_zones_and_intersections(conn)
@@ -943,8 +1065,8 @@ def seed_gis_zones_and_intersections(conn: Any):
     cursor.executemany("""
     INSERT INTO gis_zones (
         id, zone_name, zone_type, geometry_geojson, authority, source,
-        source_date, metadata, is_active, created_at
-    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT DO NOTHING;
+        source_date, metadata_json, is_active, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING;
     """, zones_data)
 
     # 3. Seed Project Intersections for prj-mpe-01

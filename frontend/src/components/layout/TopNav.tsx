@@ -1,17 +1,48 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 
-const navItems = [
-  { path: '/government/dashboard', label: 'Government Verification Portal' },
+// Public / Landowner top navigation — strictly 3 items as required
+const publicNavItems = [
+  { path: '/about', label: 'About' },
+  { path: '/login', label: 'Login' },
   { path: '/gis', label: 'National GIS Explorer' },
-  { path: '/government/compensation', label: 'Compensation & PFMS Payments' },
-  { path: '/dashboard', label: 'Executive Dashboard' },
-  { path: '/tracker', label: 'Proposal & Cadastral Tracker' },
-  { path: '/login', label: 'Login / SSO Gateway' },
-  { path: '/about', label: 'About & Study Scope' }
 ];
 
-const TopNav = () => {
+// Government portal navigation (preserved for authenticated officers)
+const governmentNavItems = [
+  { path: '/government/dashboard', label: 'Government Verified Portal' },
+  { path: '/gis', label: 'National GIS Explorer' },
+  { path: '/government/compensation', label: 'Compensation Executive Proposal' },
+  { path: '/about', label: 'About' },
+];
+
+// Agency portal navigation (preserved for authenticated agency users)
+const agencyNavItems = [
+  { path: '/agency/dashboard', label: 'Agency Portal' },
+  { path: '/gis', label: 'National GIS Explorer' },
+  { path: '/about', label: 'About' },
+];
+
+const TopNav: React.FC = () => {
+  // Detect current user role from localStorage
+  let userType: string | null = null;
+  try {
+    const stored = localStorage.getItem('bhoomi_user');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      userType = parsed?.user_type || null;
+    }
+  } catch {
+    userType = null;
+  }
+
+  // Public / Landowner view shows strictly: About | Login | National GIS Explorer
+  const navItems = userType === 'GOVERNMENT'
+    ? governmentNavItems
+    : userType === 'AGENCY'
+      ? agencyNavItems
+      : publicNavItems;
+
   return (
     <nav style={{
       backgroundColor: 'var(--surface-container-lowest)',

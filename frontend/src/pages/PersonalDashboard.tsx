@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   User, CheckCircle2, Clock, FileText, Download,
   Upload, AlertCircle, CreditCard, ShieldCheck, Check, AlertTriangle, RefreshCw,
@@ -9,17 +9,37 @@ import { getStoredUser, fetchBeneficiaryPayments } from '../services/api';
 import type { PaymentRecord } from '../services/api';
 import type { SubmittedDocument } from '../types/landownerDocuments';
 import { getMyDocuments } from '../services/documentUploadService';
-import { fetchVerificationCase, uploadOrResubmitDocument } from '../services/verificationApi';
+import {
+  fetchVerificationCase,
+  uploadOrResubmitDocument,
+  fetchLandownerDocumentsSummary
+} from '../services/verificationApi';
+import type {
+  LandownerDocumentsDashboard,
+  LandownerDocumentItem
+} from '../services/verificationApi';
 import { DocumentStatusCard } from '../components/personal/DocumentStatusCard';
 import { DocumentViewerModal } from '../components/government/DocumentViewerModal';
 import { io } from 'socket.io-client';
 
-export const PersonalDashboard: React.FC = () => {
+interface PersonalDashboardProps {
+  initialTab?: 'PARCELS' | 'CASE_TIMELINE' | 'COMPENSATION' | 'DOCUMENTS' | 'GRIEVANCE';
+}
+
+export const PersonalDashboard: React.FC<PersonalDashboardProps> = ({ initialTab = 'PARCELS' }) => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [activeTab, setActiveTab] = useState<
     'PARCELS' | 'CASE_TIMELINE' | 'COMPENSATION' | 'DOCUMENTS' | 'GRIEVANCE'
-  >('PARCELS');
+  >(() => {
+    if (location.pathname === '/personal/documents') return 'DOCUMENTS';
+    return initialTab;
+  });
+
+  const [docDashboard, setDocDashboard] = useState<LandownerDocumentsDashboard | null>(null);
+  const [loadingDocDashboard, setLoadingDocDashboard] = useState(false);
+  const [selectedReasonDoc, setSelectedReasonDoc] = useState<LandownerDocumentItem | null>(null);
 
   const [submittedDocs, setSubmittedDocs] = useState<SubmittedDocument[]>([]);
   const [loadingDocs, setLoadingDocs] = useState(false);
@@ -43,9 +63,9 @@ export const PersonalDashboard: React.FC = () => {
   };
 
   const myParcels = [
-    { khasra: '124/2', mauza: 'Demo Village', hadbast: '124', areaHa: 2.40, share: '100% Owner', landType: 'Dry Agricultural (Jirayat)', status: 'UNDER VERIFICATION', awardRs: '₹ 14,28,000' },
-    { khasra: '124/3', mauza: 'Demo Village', hadbast: '124', areaHa: 1.20, share: '50% Co-sharer', landType: 'Commercial Corridor Strip', status: 'SECTION_19', awardRs: '₹ 7,20,000' },
-    { khasra: '125/1', mauza: 'Demo Village', hadbast: '125', areaHa: 3.50, share: '100% Owner', landType: 'Wet Agricultural', status: 'POSSESSION_TAKEN', awardRs: '₹ 21,00,000' }
+    { id: 'P-001', khasra: '124/2', mauza: 'Demo Village', taluka: 'Demo Taluka', district: 'Demo District', hadbast: '124', areaHa: 2.40, share: '100% Owner', landType: 'Dry Agricultural (Jirayat)', status: 'UNDER VERIFICATION', project: 'National Highway Project', awardRs: '₹ 14,28,000' },
+    { id: 'P-002', khasra: '124/3', mauza: 'Demo Village', taluka: 'Demo Taluka', district: 'Demo District', hadbast: '124', areaHa: 1.20, share: '50% Co-sharer', landType: 'Commercial Corridor Strip', status: 'SECTION 19 DECLARED', project: 'National Highway Project', awardRs: '₹ 7,20,000' },
+    { id: 'P-003', khasra: '125/1', mauza: 'Demo Village', taluka: 'Demo Taluka', district: 'Demo District', hadbast: '125', areaHa: 3.50, share: '100% Owner', landType: 'Wet Agricultural', status: 'POSSESSION TAKEN', project: 'National Highway Project', awardRs: '₹ 21,00,000' }
   ];
 
   // Load Payments & Verification Data
@@ -63,9 +83,24 @@ export const PersonalDashboard: React.FC = () => {
       .catch(err => console.error('Failed to load verification case:', err));
   };
 
+  const loadDocumentsDashboard = () => {
+    setLoadingDocDashboard(true);
+    fetchLandownerDocumentsSummary('LA-2026-001')
+      .then(res => setDocDashboard(res))
+      .catch(err => console.error('Failed to load landowner documents dashboard:', err))
+      .finally(() => setLoadingDocDashboard(false));
+  };
+
+  useEffect(() => {
+    if (location.pathname === '/personal/documents') {
+      setActiveTab('DOCUMENTS');
+    }
+  }, [location.pathname]);
+
   useEffect(() => {
     loadLandownerPayments();
     loadVerificationData();
+    loadDocumentsDashboard();
   }, []);
 
   // Listen to Socket.IO for real-time payment & verification updates
@@ -92,10 +127,12 @@ export const PersonalDashboard: React.FC = () => {
 
     socket.on('landowner_notification', () => {
       loadVerificationData();
+      loadDocumentsDashboard();
     });
 
     socket.on('verification_case_updated', () => {
       loadVerificationData();
+      loadDocumentsDashboard();
     });
 
     return () => {
@@ -107,6 +144,7 @@ export const PersonalDashboard: React.FC = () => {
   // Load submitted documents when Documents tab is active
   useEffect(() => {
     if (activeTab === 'DOCUMENTS') {
+      loadDocumentsDashboard();
       setLoadingDocs(true);
       getMyDocuments('LA-2026-001')
         .then(docs => setSubmittedDocs(docs))
@@ -126,7 +164,7 @@ export const PersonalDashboard: React.FC = () => {
       fontFamily: 'Arial, Helvetica, sans-serif',
       color: 'var(--on-background)'
     }}>
-      {/* ── Citizen Header Banner ── */}
+      {/* ── Landowner Portal Profile Header ── */}
       <div style={{
         backgroundColor: '#fff7ed',
         border: '1px solid #ffedd5',
@@ -135,32 +173,56 @@ export const PersonalDashboard: React.FC = () => {
         marginBottom: 'var(--space-lg)',
         boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
+
+          {/* Left — Portal label + profile fields */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
             <div style={{
               backgroundColor: '#461300', color: '#ffffff', borderRadius: '50%',
-              width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center'
+              width: '52px', height: '52px', flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center'
             }}>
-              <User size={26} />
+              <User size={28} />
             </div>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#9a3412', margin: 0 }}>
-                  Welcome, {currentUser.name}
-                </h2>
-                <span style={{ backgroundColor: '#461300', color: '#ffffff', fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                <span style={{ backgroundColor: '#461300', color: '#ffffff', fontSize: '11px', fontWeight: 800, padding: '3px 10px', borderRadius: '4px', letterSpacing: '0.05em' }}>
                   LANDOWNER PORTAL
                 </span>
               </div>
-              <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#7c2d12' }}>
-                Registered Mobile: <strong>{currentUser.phone || '+91 9876543210'}</strong> | District: <strong>{currentUser.district}, {currentUser.state}</strong>
-              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px 28px', fontSize: '13px' }}>
+                <div>
+                  <span style={{ color: '#9a3412', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase' }}>Name</span>
+                  <div style={{ fontWeight: 700, color: '#1a0800', fontSize: '15px', marginTop: '1px' }}>{currentUser.name || 'Demo Landowner'}</div>
+                </div>
+                <div>
+                  <span style={{ color: '#9a3412', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase' }}>Registration No.</span>
+                  <div style={{ fontWeight: 700, color: '#461300', fontSize: '14px', fontFamily: 'monospace', marginTop: '1px' }}>
+                    {currentUser.id ? `LO-2026-${String(currentUser.id).replace(/\D/g, '').slice(-3).padStart(3, '0')}` : 'LO-2026-001'}
+                  </div>
+                </div>
+                <div>
+                  <span style={{ color: '#9a3412', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase' }}>District</span>
+                  <div style={{ fontWeight: 600, color: '#1a0800', marginTop: '1px' }}>{currentUser.district || 'Demo District'}</div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div style={{ backgroundColor: '#ffffff', border: '1px solid #ffedd5', borderRadius: 'var(--radius-md)', padding: '10px 16px', fontSize: '12px', textAlign: 'right' }}>
-            <span style={{ color: '#9a3412', fontWeight: 700 }}>Associated Case Code:</span><br />
-            <strong style={{ fontSize: '15px', color: '#461300' }}>LA-2026-001 (Mumbai–Pune Expansion)</strong>
+          {/* Right — Case association info */}
+          <div style={{ backgroundColor: '#ffffff', border: '1px solid #fed7aa', borderRadius: 'var(--radius-md)', padding: '14px 20px', minWidth: '220px', fontSize: '13px' }}>
+            <div style={{ marginBottom: '10px' }}>
+              <span style={{ color: '#9a3412', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase' }}>Association</span>
+              <div style={{ fontWeight: 700, color: '#1a0800', marginTop: '2px' }}>
+                {verificationCase?.projectName || verificationCase?.project_name || 'National Highway Project'}
+              </div>
+            </div>
+            <div>
+              <span style={{ color: '#9a3412', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase' }}>Case Code</span>
+              <div style={{ fontWeight: 800, color: '#461300', fontSize: '16px', fontFamily: 'monospace', marginTop: '2px' }}>
+                {verificationCase?.caseId || 'LA-2026-001'}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -248,62 +310,31 @@ export const PersonalDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* ── Prominent Document Submission Card ── */}
-      <div style={{
-
-        backgroundColor: '#461300',
-        borderRadius: 'var(--radius-lg)',
-        padding: '20px 24px',
-        marginBottom: 'var(--space-lg)',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '16px',
-        boxShadow: '0 4px 16px rgba(70,19,0,0.25)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{
-            backgroundColor: 'rgba(255,255,255,0.15)',
-            borderRadius: '50%',
-            width: '52px', height: '52px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0
-          }}>
-            <Upload size={26} color="#ffffff" />
-          </div>
-          <div>
-            <div style={{ fontSize: '17px', fontWeight: 700, color: '#ffffff', marginBottom: '4px' }}>
-              Submit Land Documents
-            </div>
-            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>
-              Upload the required documents for verification of your land acquisition case.
-              Use your camera or select files from your device.
-            </div>
-          </div>
+      {/* ── Compact document shortcut banner (non-prominent) ── */}
+      {rejectedCount > 0 && (
+        <div style={{
+          backgroundColor: '#fef2f2',
+          border: '1.5px solid #fecaca',
+          borderRadius: 'var(--radius-md)',
+          padding: '10px 16px',
+          marginBottom: 'var(--space-md)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px',
+          flexWrap: 'wrap'
+        }}>
+          <span style={{ fontSize: '13px', color: '#991b1b', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <AlertCircle size={16} /> {rejectedCount} document{rejectedCount > 1 ? 's' : ''} rejected — action required
+          </span>
+          <button
+            onClick={() => setActiveTab('DOCUMENTS')}
+            style={{ backgroundColor: '#dc2626', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '6px 14px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Arial, Helvetica, sans-serif' }}
+          >
+            Go to My Documents
+          </button>
         </div>
-        <button
-          onClick={() => setActiveTab('DOCUMENTS')}
-          style={{
-            backgroundColor: '#ffffff',
-            color: '#461300',
-            border: 'none',
-            borderRadius: 'var(--radius-md)',
-            padding: '12px 24px',
-            fontSize: '14px',
-            fontWeight: 700,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            flexShrink: 0,
-            fontFamily: 'Arial, Helvetica, sans-serif',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
-          }}
-        >
-          <Upload size={18} /> View / Upload Documents
-        </button>
-      </div>
+      )}
 
       {/* ── Key Summary Cards ── */}
       <div style={{
@@ -352,9 +383,9 @@ export const PersonalDashboard: React.FC = () => {
         {[
           { key: 'PARCELS', label: 'My Land' },
           { key: 'DOCUMENTS', label: 'My Documents' },
-          { key: 'CASE_TIMELINE', label: 'Acquisition Case' },
+          { key: 'CASE_TIMELINE', label: 'Land Acquisition' },
           { key: 'COMPENSATION', label: 'Compensation' },
-          { key: 'GRIEVANCE', label: 'Help & Inquiry' }
+          { key: 'GRIEVANCE', label: 'Help & Query' }
         ].map(t => (
           <button
             key={t.key}
@@ -397,23 +428,35 @@ export const PersonalDashboard: React.FC = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 'var(--space-lg)' }}>
           {myParcels.map((p, idx) => (
             <div key={idx} style={{ backgroundColor: '#ffffff', border: '1px solid var(--outline-variant)', borderRadius: 'var(--radius-lg)', padding: '20px', boxShadow: '0 2px 6px rgba(0,0,0,0.03)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <span style={{ backgroundColor: '#461300', color: '#ffffff', fontSize: '12px', fontWeight: 700, padding: '4px 10px', borderRadius: '4px' }}>
-                  Khasra No: {p.khasra}
-                </span>
-                <span style={{ backgroundColor: '#f0fdf4', color: '#166534', border: '1px solid #86efac', fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span style={{ backgroundColor: '#461300', color: '#ffffff', fontSize: '12px', fontWeight: 700, padding: '3px 9px', borderRadius: '4px' }}>
+                    {p.id}
+                  </span>
+                  <span style={{ backgroundColor: '#fff7ed', color: '#9a3412', border: '1px solid #fed7aa', fontSize: '11px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px' }}>
+                    Khasra {p.khasra}
+                  </span>
+                </div>
+                <span style={{
+                  backgroundColor: p.status === 'POSSESSION TAKEN' ? '#f0fdf4' : p.status === 'SECTION 19 DECLARED' ? '#eff6ff' : '#fffbeb',
+                  color: p.status === 'POSSESSION TAKEN' ? '#166534' : p.status === 'SECTION 19 DECLARED' ? '#1d4ed8' : '#854d0e',
+                  border: `1px solid ${p.status === 'POSSESSION TAKEN' ? '#86efac' : p.status === 'SECTION 19 DECLARED' ? '#93c5fd' : '#fde68a'}`,
+                  fontSize: '10px', fontWeight: 700, padding: '3px 8px', borderRadius: '4px'
+                }}>
                   {p.status}
                 </span>
               </div>
 
-              <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--primary)', marginBottom: '8px' }}>
-                Mouza {p.mauza} (Hadbast No. {p.hadbast})
+              <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--primary)', marginBottom: '6px' }}>
+                Mouza {p.mauza}
               </div>
 
-              <div style={{ fontSize: '12px', color: 'var(--on-surface-variant)', marginBottom: '16px', lineHeight: 1.6 }}>
+              <div style={{ fontSize: '12px', color: 'var(--on-surface-variant)', marginBottom: '14px', lineHeight: 1.7 }}>
+                <span>Taluka: <strong>{p.taluka}</strong></span> &nbsp;·&nbsp;
+                <span>District: <strong>{p.district}</strong></span><br />
                 Land Type: <strong>{p.landType}</strong><br />
-                Area Assessed: <strong>{p.areaHa} Hectares</strong><br />
-                Shareholding: <strong>{p.share}</strong>
+                Area: <strong>{p.areaHa} Ha</strong>&nbsp;&nbsp;|&nbsp;&nbsp;Shareholding: <strong>{p.share}</strong><br />
+                Project: <strong>{p.project}</strong>
               </div>
 
               <div style={{ borderTop: '1px solid var(--surface-container-high)', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -421,19 +464,60 @@ export const PersonalDashboard: React.FC = () => {
                   <div style={{ fontSize: '10px', color: 'var(--outline)', fontWeight: 700, textTransform: 'uppercase' }}>Calculated Award</div>
                   <div style={{ fontSize: '16px', fontWeight: 700, color: '#166534' }}>{p.awardRs}</div>
                 </div>
+                <button
+                  onClick={() => navigate(`/gis?parcel=${p.id}`)}
+                  style={{ backgroundColor: '#f0f9ff', color: '#0369a1', border: '1px solid #bae6fd', borderRadius: '6px', padding: '6px 12px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontFamily: 'Arial, Helvetica, sans-serif' }}
+                >
+                  🗺 View on GIS
+                </button>
               </div>
             </div>
           ))}
         </div>
       )}
 
+
       {/* ══════════════════════════════════════════
           TAB 2: CASE TIMELINE
       ══════════════════════════════════════════ */}
       {activeTab === 'CASE_TIMELINE' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+
+          {/* Case summary banner */}
+          <div style={{ backgroundColor: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 'var(--radius-lg)', padding: '18px 22px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px' }}>
+            <div>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: '#9a3412', textTransform: 'uppercase' }}>Case Code</div>
+              <div style={{ fontSize: '17px', fontWeight: 800, color: '#461300', fontFamily: 'monospace', marginTop: '2px' }}>{verificationCase?.caseId || 'LA-2026-001'}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: '#9a3412', textTransform: 'uppercase' }}>Project</div>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: '#1a0800', marginTop: '2px' }}>{verificationCase?.projectName || 'National Highway Project'}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: '#9a3412', textTransform: 'uppercase' }}>Parcel</div>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: '#1a0800', marginTop: '2px' }}>P-001 &nbsp;·&nbsp; Khasra 124/2</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: '#9a3412', textTransform: 'uppercase' }}>Current Stage</div>
+              <div style={{ marginTop: '4px' }}>
+                <span style={{ backgroundColor: '#dbeafe', color: '#1d4ed8', fontSize: '12px', fontWeight: 700, padding: '3px 10px', borderRadius: '4px' }}>
+                  {verificationCase?.currentStage === 'STATE_GOVERNMENT' ? 'State Verification' : verificationCase?.currentStage === 'CENTRAL_MINISTRY' ? 'Central Verification' : 'District Verification'}
+                </span>
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: '#9a3412', textTransform: 'uppercase' }}>Status</div>
+              <div style={{ marginTop: '4px' }}>
+                <span style={{ backgroundColor: '#dcfce7', color: '#166534', fontSize: '12px', fontWeight: 700, padding: '3px 10px', borderRadius: '4px' }}>
+                  {verificationCase?.workflowStatus?.replace(/_/g, ' ') || 'In Progress'}
+                </span>
+              </div>
+            </div>
+          </div>
+
         <div style={{ backgroundColor: '#ffffff', border: '1px solid var(--outline-variant)', borderRadius: 'var(--radius-lg)', padding: '28px' }}>
           <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#461300', margin: '0 0 20px 0' }}>
-            Acquisition Statutory Progress (Case LA-2026-001)
+            Acquisition Statutory Progress
           </h3>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', position: 'relative', borderLeft: '3px solid #0a2540', paddingLeft: '24px' }}>
@@ -457,6 +541,7 @@ export const PersonalDashboard: React.FC = () => {
               <div style={{ fontSize: '12px', color: '#94a3b8' }}>Pending completion of State & Central statutory clearances</div>
             </div>
           </div>
+        </div>
         </div>
       )}
 
@@ -731,20 +816,35 @@ export const PersonalDashboard: React.FC = () => {
 
 
       {/* ══════════════════════════════════════════
-          TAB 4: DOCUMENT SUBMISSIONS (MY DOCUMENTS)
+          TAB 4: DOCUMENT STATUS DASHBOARD
       ══════════════════════════════════════════ */}
       {activeTab === 'DOCUMENTS' && (() => {
-        const rawDocs = (verificationCase?.documents && verificationCase.documents.length > 0)
-          ? verificationCase.documents
-          : submittedDocs;
+        const summary = docDashboard?.summary || {
+          verified: 1,
+          pending: 2,
+          required: 3,
+          actionRequired: 1,
+          totalRequired: 7
+        };
 
-        const currentPendingCount = rawDocs.filter((d: any) => d.status === 'PENDING' || d.status === 'RESUBMITTED').length;
-        const currentRejectedCount = rawDocs.filter((d: any) => d.status === 'REJECTED').length;
-        const currentVerifiedCount = rawDocs.filter((d: any) => d.status === 'VERIFIED').length;
+        const docs = docDashboard?.documents || [];
+
+        const getDocBadge = (item: LandownerDocumentItem) => {
+          if (item.status === 'VERIFIED') {
+            return { label: item.displayStatus || '✓ VERIFIED BY DISTRICT', color: '#166534', bg: '#dcfce7', border: '#86efac' };
+          }
+          if (item.status === 'REJECTED') {
+            return { label: item.displayStatus || '✕ REJECTED BY DISTRICT', color: '#991b1b', bg: '#fee2e2', border: '#fca5a5' };
+          }
+          if (item.status === 'PENDING_VERIFICATION' || (item as any).status === 'PENDING') {
+            return { label: item.displayStatus || '⏳ PENDING DISTRICT VERIFICATION', color: '#854d0e', bg: '#fffbeb', border: '#fde68a' };
+          }
+          return { label: item.displayStatus || '● REQUIRED — NOT UPLOADED', color: '#475569', bg: '#f1f5f9', border: '#cbd5e1' };
+        };
 
         return (
           <div>
-            {/* Header / Summary */}
+            {/* Header / Case Title */}
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
@@ -754,216 +854,546 @@ export const PersonalDashboard: React.FC = () => {
               gap: '12px'
             }}>
               <div>
-                <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#461300', margin: '0 0 4px 0', letterSpacing: '0.03em' }}>
-                  MY DOCUMENTS
-                </h3>
-                <div style={{ fontSize: '13px', color: 'var(--on-surface-variant)' }}>
-                  {rawDocs.length} mandatory documents for Case LA-2026-001 ·
-                  <span style={{ color: '#166534', fontWeight: 700 }}> {currentVerifiedCount} verified</span> ·
-                  <span style={{ color: '#856404', fontWeight: 700 }}> {currentPendingCount} pending</span>
-                  {currentRejectedCount > 0 && <span style={{ color: '#991b1b', fontWeight: 700 }}> · {currentRejectedCount} rejected</span>}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#461300', margin: 0, letterSpacing: '0.02em' }}>
+                    MY DOCUMENTS — STATUS DASHBOARD
+                  </h3>
+                  <span style={{
+                    backgroundColor: '#ffedd5',
+                    color: '#9a3412',
+                    fontSize: '11px',
+                    fontWeight: 800,
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    border: '1px solid #fed7aa'
+                  }}>
+                    LANDOWNER PORTAL
+                  </span>
+                </div>
+                <div style={{ fontSize: '13px', color: '#64748b' }}>
+                  Case: <strong style={{ color: '#0f172a' }}>{docDashboard?.caseId || 'LA-2026-001'}</strong> ({(docDashboard as any)?.caseTitle || 'Mumbai–Pune Expressway Widening & Corridor Project'}) · Khasra 124/2 (Parcel P-001)
                 </div>
               </div>
-              <button
-                onClick={() => {
-                  const firstRejected = rawDocs.find((d: any) => d.status === 'REJECTED');
-                  if (firstRejected) setReuploadModalDoc(firstRejected);
-                  else alert('All mandatory documents are currently submitted or verified.');
-                }}
-                style={{
-                  backgroundColor: '#461300',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '10px 18px',
-                  fontSize: '13px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  fontFamily: 'Arial, Helvetica, sans-serif'
-                }}
-              >
-                <Upload size={16} /> Re-Upload / Update Documents
-              </button>
             </div>
 
-            {/* Rejected alert banner */}
-            {currentRejectedCount > 0 && (
+            {/* ── Summary Counters Header (4 Cards) ── */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '14px',
+              marginBottom: '24px'
+            }}>
+              {/* Verified Card */}
               <div style={{
-                backgroundColor: '#fef2f2',
-                border: '1.5px solid #fecaca',
-                borderRadius: 'var(--radius-md)',
-                padding: '14px 18px',
-                marginBottom: '20px',
+                backgroundColor: '#f0fdf4',
+                border: '1.5px solid #86efac',
+                borderRadius: '10px',
+                padding: '16px 18px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 800, color: '#166534', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                    Verified
+                  </span>
+                  <CheckCircle2 size={18} color="#166534" />
+                </div>
+                <div style={{ fontSize: '28px', fontWeight: 800, color: '#166534', lineHeight: 1 }}>
+                  {summary.verified}
+                </div>
+                <div style={{ fontSize: '11px', color: '#15803d', marginTop: '6px', fontWeight: 600 }}>
+                  Approved by verification officers
+                </div>
+              </div>
+
+              {/* Pending Verification Card */}
+              <div style={{
+                backgroundColor: '#fffbeb',
+                border: '1.5px solid #fde68a',
+                borderRadius: '10px',
+                padding: '16px 18px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 800, color: '#854d0e', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                    Pending Verification
+                  </span>
+                  <Clock size={18} color="#854d0e" />
+                </div>
+                <div style={{ fontSize: '28px', fontWeight: 800, color: '#854d0e', lineHeight: 1 }}>
+                  {summary.pending}
+                </div>
+                <div style={{ fontSize: '11px', color: '#a16207', marginTop: '6px', fontWeight: 600 }}>
+                  Uploaded — waiting in officer queue
+                </div>
+              </div>
+
+              {/* Required Card */}
+              <div style={{
+                backgroundColor: '#f8fafc',
+                border: '1.5px solid #cbd5e1',
+                borderRadius: '10px',
+                padding: '16px 18px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 800, color: '#475569', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                    Required
+                  </span>
+                  <FileText size={18} color="#475569" />
+                </div>
+                <div style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a', lineHeight: 1 }}>
+                  {summary.required}
+                </div>
+                <div style={{ fontSize: '11px', color: '#64748b', marginTop: '6px', fontWeight: 600 }}>
+                  Not yet uploaded
+                </div>
+              </div>
+
+              {/* Action Required Card */}
+              <div style={{
+                backgroundColor: summary.actionRequired > 0 ? '#fef2f2' : '#f8fafc',
+                border: `1.5px solid ${summary.actionRequired > 0 ? '#fca5a5' : '#e2e8f0'}`,
+                borderRadius: '10px',
+                padding: '16px 18px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 800, color: summary.actionRequired > 0 ? '#991b1b' : '#64748b', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                    Action Required
+                  </span>
+                  <AlertCircle size={18} color={summary.actionRequired > 0 ? '#991b1b' : '#94a3b8'} />
+                </div>
+                <div style={{ fontSize: '28px', fontWeight: 800, color: summary.actionRequired > 0 ? '#991b1b' : '#64748b', lineHeight: 1 }}>
+                  {summary.actionRequired}
+                </div>
+                <div style={{ fontSize: '11px', color: summary.actionRequired > 0 ? '#b91c1c' : '#94a3b8', marginTop: '6px', fontWeight: 600 }}>
+                  {summary.actionRequired > 0 ? 'Rejected — re-upload required' : 'No rejected items'}
+                </div>
+              </div>
+            </div>
+
+            {/* ── Multi-tier Verification Progress ── */}
+            <div style={{
+              backgroundColor: '#ffffff',
+              border: '1px solid #e2e8f0',
+              borderRadius: '10px',
+              padding: '16px 20px',
+              marginBottom: '28px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+            }}>
+              <div style={{ fontSize: '12px', fontWeight: 800, color: '#461300', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '12px' }}>
+                Overall Verification Progress
+              </div>
+              <div style={{
                 display: 'flex',
                 alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
                 gap: '12px'
               }}>
-                <AlertCircle size={22} color="#991b1b" style={{ flexShrink: 0 }} />
-                <span style={{ fontSize: '14px', color: '#991b1b', fontWeight: 700 }}>
-                  {currentRejectedCount} document{currentRejectedCount > 1 ? 's' : ''} require{currentRejectedCount === 1 ? 's' : ''} correction and re-upload.
-                  Please review the rejection reason and submit Version 2 below.
-                </span>
-              </div>
-            )}
+                {/* District */}
+                <div style={{
+                  flex: 1,
+                  minWidth: '220px',
+                  padding: '12px 14px',
+                  borderRadius: '8px',
+                  backgroundColor: '#fff7ed',
+                  border: '1px solid #ffedd5'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 800, color: '#461300' }}>1. District Verification</span>
+                    <span style={{
+                      fontSize: '10px',
+                      fontWeight: 800,
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      backgroundColor: '#fef3c7',
+                      color: '#92400e',
+                      border: '1px solid #fde68a'
+                    }}>
+                      STAGE 1 · IN PROGRESS
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#7c2d12' }}>
+                    CALA Officer / Talathi field boundary &amp; title verification
+                  </div>
+                </div>
 
-            {/* Document List */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {rawDocs.map((doc: any, index: number) => {
-                const isDocRejected = doc.status === 'REJECTED';
-                const isDocVerified = doc.status === 'VERIFIED';
+                <div style={{ color: '#94a3b8', fontWeight: 800, fontSize: '16px' }}>→</div>
+
+                {/* State */}
+                <div style={{
+                  flex: 1,
+                  minWidth: '220px',
+                  padding: '12px 14px',
+                  borderRadius: '8px',
+                  backgroundColor: '#f8fafc',
+                  border: '1px solid #e2e8f0'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 800, color: '#334155' }}>2. State Verification</span>
+                    <span style={{
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      backgroundColor: '#f1f5f9',
+                      color: '#64748b',
+                      border: '1px solid #cbd5e1'
+                    }}>
+                      STAGE 2 · PENDING
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#64748b' }}>
+                    State Revenue Department legal endorsement
+                  </div>
+                </div>
+
+                <div style={{ color: '#94a3b8', fontWeight: 800, fontSize: '16px' }}>→</div>
+
+                {/* Central */}
+                <div style={{
+                  flex: 1,
+                  minWidth: '220px',
+                  padding: '12px 14px',
+                  borderRadius: '8px',
+                  backgroundColor: '#f8fafc',
+                  border: '1px solid #e2e8f0'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 800, color: '#334155' }}>3. Central Verification</span>
+                    <span style={{
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      backgroundColor: '#f1f5f9',
+                      color: '#64748b',
+                      border: '1px solid #cbd5e1'
+                    }}>
+                      STAGE 3 · PENDING
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#64748b' }}>
+                    Central Ministry PFMS compensation clearing
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Required Documents List Section ── */}
+            <div style={{ marginBottom: '14px' }}>
+              <h4 style={{ fontSize: '16px', fontWeight: 800, color: '#461300', margin: '0 0 4px 0' }}>
+                Required Documents Checklist
+              </h4>
+              <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
+                Every required document for land acquisition verification and compensation clearance. Select <strong>Upload</strong> or <strong>Re-upload</strong> directly on any document.
+              </p>
+            </div>
+
+            {/* Document Cards List */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '32px' }}>
+              {docs.map((doc, idx) => {
+                const isRejected = doc.status === 'REJECTED';
+                const isVerified = doc.status === 'VERIFIED';
+                const isPending = doc.status === 'PENDING_VERIFICATION' || (doc as any).status === 'PENDING';
+                const isNotUploaded = doc.status === 'NOT_UPLOADED';
+                const badge = getDocBadge(doc);
+
+                const cardBg = isRejected ? '#fef2f2' : isVerified ? '#f0fdf4' : isPending ? '#fffdf5' : '#f8fafc';
+                const cardBorder = isRejected ? '2px solid #ef4444' : isVerified ? '1.5px solid #86efac' : isPending ? '1.5px solid #fde68a' : '1.5px dashed #94a3b8';
+                const cardShadow = isRejected ? '0 2px 8px rgba(239, 68, 68, 0.12)' : '0 1px 3px rgba(0,0,0,0.03)';
 
                 return (
                   <div
-                    key={doc.id}
+                    key={doc.slug}
                     style={{
-                      backgroundColor: '#ffffff',
-                      border: `1.5px solid ${isDocRejected ? '#fca5a5' : isDocVerified ? '#86efac' : 'var(--outline-variant)'}`,
-                      borderRadius: 'var(--radius-lg)',
-                      overflow: 'hidden',
-                      boxShadow: '0 2px 6px rgba(0,0,0,0.04)'
+                      backgroundColor: cardBg,
+                      border: cardBorder,
+                      borderRadius: '10px',
+                      padding: '18px 20px',
+                      boxShadow: cardShadow,
+                      transition: 'all 0.2s ease'
                     }}
                   >
-                    {/* Card Header */}
-                    <div style={{
-                      backgroundColor: isDocRejected ? '#fef2f2' : isDocVerified ? '#f0fdf4' : '#f8fafc',
-                      borderBottom: `1px solid ${isDocRejected ? '#fecaca' : isDocVerified ? '#bbf7d0' : '#e2e8f0'}`,
-                      padding: '14px 20px',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      flexWrap: 'wrap',
-                      gap: '10px'
-                    }}>
-                      <div>
-                        <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: isDocRejected ? '#991b1b' : '#0a2540' }}>
-                          {index + 1}. {doc.title}
-                        </h4>
-                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>
-                          Ref: <strong>{doc.id}</strong> • Type: <strong>{doc.type}</strong> • Total Pages: <strong>{doc.totalPages || doc.pages?.length || 1}</strong>
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span style={{
-                          padding: '4px 12px',
-                          borderRadius: '6px',
-                          fontSize: '12px',
-                          fontWeight: 700,
-                          backgroundColor: isDocRejected ? '#fee2e2' : isDocVerified ? '#dcfce7' : '#fffbeb',
-                          color: isDocRejected ? '#991b1b' : isDocVerified ? '#15803d' : '#854d0e',
-                          border: `1px solid ${isDocRejected ? '#fecaca' : isDocVerified ? '#86efac' : '#fde68a'}`
-                        }}>
-                          {isDocVerified ? '✓ Verified' : isDocRejected ? '✕ REJECTED' : '⏳ Pending Verification'}
-                        </span>
-                        <button
-                          onClick={() => setSelectedViewerDoc(doc)}
-                          style={{
-                            backgroundColor: '#0a2540',
-                            color: '#ffffff',
-                            border: 'none',
-                            borderRadius: '6px',
-                            padding: '7px 14px',
-                            fontSize: '12px',
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px' }}>
+                      {/* Left: Document Info */}
+                      <div style={{ flex: 1, minWidth: '240px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '6px' }}>
+                          <span style={{ fontSize: '13px', fontWeight: 800, color: '#94a3b8' }}>
+                            {idx + 1}.
+                          </span>
+                          <h4 style={{
+                            margin: 0,
+                            fontSize: '16px',
                             fontWeight: 700,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px'
-                          }}
-                        >
-                          <Eye size={14} /> View
-                        </button>
-                      </div>
-                    </div>
+                            color: isRejected ? '#991b1b' : isVerified ? '#14532d' : isPending ? '#78350f' : '#0f172a'
+                          }}>
+                            {doc.title}
+                          </h4>
+                          {doc.version && doc.version > 1 && (
+                            <span style={{
+                              backgroundColor: '#e2e8f0',
+                              color: '#334155',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              padding: '2px 8px',
+                              borderRadius: '4px'
+                            }}>
+                              Version {doc.version}
+                            </span>
+                          )}
+                        </div>
 
-                    {/* Metadata Details */}
-                    <div style={{ padding: '16px 20px' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', fontSize: '13px' }}>
-                        <div>
-                          <span style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase', fontWeight: 700 }}>Status</span>
-                          <div style={{ fontWeight: 600, marginTop: '2px', color: isDocRejected ? '#991b1b' : isDocVerified ? '#166534' : '#854d0e' }}>
-                            {isDocVerified ? 'Verified by Authority' : isDocRejected ? 'REJECTED' : 'Pending Verification'}
+                        <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px', lineHeight: 1.4 }}>
+                          {doc.subtitle || (doc as any).description}
+                        </div>
+
+                        {/* Status specific details */}
+                        {isNotUploaded && (
+                          <div style={{ fontSize: '11px', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontWeight: 700 }}>Accepted formats:</span> {doc.acceptedFormats || 'PDF, JPG, PNG'} • Max size: {doc.maxSizeMb || 10}MB
                           </div>
-                        </div>
-                        <div>
-                          <span style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase', fontWeight: 700 }}>Upload Date</span>
-                          <div style={{ fontWeight: 600, marginTop: '2px', color: '#0f172a' }}>{doc.uploadedDate || '10 Sep 2026'}</div>
-                        </div>
-                        <div>
-                          <span style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase', fontWeight: 700 }}>Version</span>
-                          <div style={{ fontWeight: 700, marginTop: '2px', color: '#0a2540' }}>Version {doc.version || 1}</div>
-                        </div>
-                        <div>
-                          <span style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase', fontWeight: 700 }}>Verification Authority</span>
-                          <div style={{ fontWeight: 600, marginTop: '2px', color: '#0f172a' }}>District Collectorate</div>
-                        </div>
+                        )}
+
+                        {isPending && (
+                          <div style={{ fontSize: '12px', color: '#854d0e', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <span>Uploaded on: <strong>{doc.uploadedDate || 'Today'}</strong></span>
+                            <span>•</span>
+                            <span>{doc.totalPages || (doc as any).pagesCount || (doc.pages && doc.pages.length) || 1} page(s) submitted</span>
+                            <span>•</span>
+                            <span>Ref: <strong>{doc.documentId || 'SUBMITTED'}</strong></span>
+                          </div>
+                        )}
+
+                        {isVerified && (
+                          <div style={{ fontSize: '12px', color: '#166534', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <span>Verified on: <strong>{doc.verifiedAt || doc.uploadedDate || '10 Sep 2026'}</strong></span>
+                            <span>•</span>
+                            <span>Ref: <strong>{doc.documentId}</strong></span>
+                            <span>•</span>
+                            <span>Verified for Case {docDashboard?.caseId || 'LA-2026-001'}</span>
+                          </div>
+                        )}
+
+                        {/* REJECTED Callout Box */}
+                        {isRejected && (
+                          <div style={{
+                            marginTop: '12px',
+                            backgroundColor: '#ffffff',
+                            border: '1.5px solid #fca5a5',
+                            borderRadius: '8px',
+                            padding: '12px 16px'
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                              <AlertCircle size={15} color="#dc2626" />
+                              <span style={{ color: '#991b1b', fontSize: '12px', fontWeight: 800 }}>
+                                REJECTION NOTICE
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '13px', color: '#991b1b', lineHeight: 1.5 }}>
+                              <strong>Reason:</strong> {doc.rejectionReason || 'Document could not be verified by District Officer'}
+                            </div>
+                            {doc.rejectionRemarks && (
+                              <div style={{ fontSize: '12px', color: '#7f1d1d', marginTop: '4px' }}>
+                                <strong>Officer Remarks:</strong> {doc.rejectionRemarks}
+                              </div>
+                            )}
+                            <div style={{ marginTop: '8px', display: 'inline-block', backgroundColor: '#fee2e2', color: '#b91c1c', fontSize: '11px', fontWeight: 800, padding: '2px 8px', borderRadius: '4px', letterSpacing: '0.03em' }}>
+                              Action: RE-UPLOAD REQUIRED
+                            </div>
+                          </div>
+                        )}
                       </div>
 
-                      {/* Prominent Rejection Banner */}
-                      {isDocRejected && (
-                        <div style={{
-                          marginTop: '16px',
-                          backgroundColor: '#fef2f2',
-                          border: '1.5px solid #ef4444',
-                          borderRadius: '8px',
-                          padding: '16px'
+                      {/* Right: Badge & Contextual Actions */}
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px', flexShrink: 0 }}>
+                        {/* Status Badge */}
+                        <span style={{
+                          backgroundColor: badge.bg,
+                          color: badge.color,
+                          border: `1px solid ${badge.border}`,
+                          fontSize: '11px',
+                          fontWeight: 800,
+                          padding: '4px 12px',
+                          borderRadius: '20px',
+                          whiteSpace: 'nowrap',
+                          letterSpacing: '0.02em',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '5px'
                         }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
-                            <div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                                <span style={{ backgroundColor: '#dc2626', color: '#ffffff', fontSize: '11px', fontWeight: 800, padding: '2px 8px', borderRadius: '4px' }}>
-                                  REJECTED
-                                </span>
-                                <strong style={{ color: '#991b1b', fontSize: '14px' }}>Document Requires Correction</strong>
-                              </div>
-                              <div style={{ fontSize: '13px', color: '#7f1d1d', lineHeight: 1.5 }}>
-                                <div><strong>Reason:</strong> {doc.rejectionReason}</div>
-                                {doc.rejectionRemarks && <div style={{ marginTop: '3px' }}><strong>Remarks:</strong> {doc.rejectionRemarks}</div>}
-                                {doc.rejectionCategory && <div style={{ marginTop: '3px', fontSize: '12px', color: '#991b1b' }}>Category: {doc.rejectionCategory}</div>}
-                              </div>
-                            </div>
+                          {badge.label}
+                        </span>
+
+                        {/* Action Buttons */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          {isNotUploaded && (
                             <button
-                              onClick={() => setReuploadModalDoc(doc)}
+                              onClick={() => navigate(`/personal/documents/upload/${doc.slug}`)}
                               style={{
-                                backgroundColor: '#dc2626',
+                                backgroundColor: '#461300',
                                 color: '#ffffff',
                                 border: 'none',
                                 borderRadius: '6px',
-                                padding: '10px 20px',
-                                fontSize: '13px',
+                                padding: '8px 18px',
+                                fontSize: '12px',
                                 fontWeight: 700,
                                 cursor: 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '8px',
-                                boxShadow: '0 2px 6px rgba(220, 38, 38, 0.3)'
+                                gap: '6px',
+                                fontFamily: 'Arial, Helvetica, sans-serif',
+                                boxShadow: '0 1px 3px rgba(70, 19, 0, 0.2)'
                               }}
                             >
-                              <RefreshCw size={15} /> RE-UPLOAD DOCUMENT
+                              <Upload size={14} /> Upload
                             </button>
-                          </div>
-                        </div>
-                      )}
+                          )}
 
-                      {/* Verification History */}
-                      {doc.history && doc.history.length > 0 && (
-                        <div style={{ marginTop: '14px', borderTop: '1px dashed #cbd5e1', paddingTop: '10px' }}>
-                          <div style={{ fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <History size={13} /> Verification History
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            {doc.history.map((hist: any, hIdx: number) => (
-                              <div key={hIdx} style={{ fontSize: '12px', color: '#334155', backgroundColor: '#f8fafc', padding: '6px 10px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-                                <span style={{ fontWeight: 700 }}>Version {hist.version}</span>: {hist.status} on {hist.rejected_at || hist.verified_at || hist.uploaded_date}
-                                {hist.rejection_reason && <span style={{ color: '#991b1b' }}> — Reason: {hist.rejection_reason}</span>}
-                              </div>
-                            ))}
-                          </div>
+                          {isPending && (
+                            <button
+                              onClick={() => {
+                                const targetDoc = (doc as any).document || {
+                                  id: doc.documentId || `DOC-${doc.slug}`,
+                                  title: doc.title,
+                                  type: doc.documentType,
+                                  docNumber: doc.documentId || 'SUBMITTED',
+                                  status: 'PENDING',
+                                  version: doc.version || 1,
+                                  totalPages: doc.totalPages || (doc as any).pagesCount || (doc.pages && doc.pages.length) || 1,
+                                  uploadedDate: doc.uploadedDate || 'Today',
+                                  history: doc.history || [],
+                                  pages: (doc.pages && doc.pages.length > 0) ? doc.pages : [
+                                    {
+                                      pageNumber: 1,
+                                      title: doc.title,
+                                      contentHeading: `Landowner Upload Submission`,
+                                      khasraNumbers: ['124/2'],
+                                      areaHa: 2.40,
+                                      landowner: currentUser.name,
+                                      village: 'Demo Village',
+                                      taluka: 'Demo Taluka',
+                                      district: 'Demo District',
+                                      statusLabel: 'WAITING FOR DISTRICT VERIFICATION'
+                                    }
+                                  ]
+                                };
+                                setSelectedViewerDoc(targetDoc);
+                              }}
+                              style={{
+                                backgroundColor: '#ffffff',
+                                color: '#461300',
+                                border: '1.5px solid #461300',
+                                borderRadius: '6px',
+                                padding: '7px 16px',
+                                fontSize: '12px',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                fontFamily: 'Arial, Helvetica, sans-serif'
+                              }}
+                            >
+                              <Eye size={14} /> View
+                            </button>
+                          )}
+
+                          {isVerified && (
+                            <button
+                              onClick={() => {
+                                const targetDoc = (doc as any).document || {
+                                  id: doc.documentId || `DOC-${doc.slug}`,
+                                  title: doc.title,
+                                  type: doc.documentType,
+                                  docNumber: doc.documentId || 'VERIFIED',
+                                  status: 'VERIFIED',
+                                  version: doc.version || 1,
+                                  totalPages: doc.totalPages || (doc as any).pagesCount || (doc.pages && doc.pages.length) || 1,
+                                  uploadedDate: doc.uploadedDate || '10 Sep 2026',
+                                  history: doc.history || [],
+                                  pages: (doc.pages && doc.pages.length > 0) ? doc.pages : [
+                                    {
+                                      pageNumber: 1,
+                                      title: doc.title,
+                                      contentHeading: `District Verified Acquisition Record`,
+                                      khasraNumbers: ['124/2'],
+                                      areaHa: 2.40,
+                                      landowner: currentUser.name,
+                                      village: 'Demo Village',
+                                      taluka: 'Demo Taluka',
+                                      district: 'Demo District',
+                                      statusLabel: 'AUTHENTICATED AND APPROVED'
+                                    }
+                                  ]
+                                };
+                                setSelectedViewerDoc(targetDoc);
+                              }}
+                              style={{
+                                backgroundColor: '#166534',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '6px',
+                                padding: '7px 16px',
+                                fontSize: '12px',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                fontFamily: 'Arial, Helvetica, sans-serif'
+                              }}
+                            >
+                              <Eye size={14} /> View
+                            </button>
+                          )}
+
+                          {isRejected && (
+                            <>
+                              <button
+                                onClick={() => setSelectedReasonDoc(doc)}
+                                style={{
+                                  backgroundColor: '#ffffff',
+                                  color: '#dc2626',
+                                  border: '1.5px solid #dc2626',
+                                  borderRadius: '6px',
+                                  padding: '7px 14px',
+                                  fontSize: '12px',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  fontFamily: 'Arial, Helvetica, sans-serif'
+                                }}
+                              >
+                                <AlertCircle size={14} /> View Reason
+                              </button>
+                              <button
+                                onClick={() => navigate(`/personal/documents/upload/${doc.slug}${doc.documentId ? `?reupload=${doc.documentId}` : ''}`)}
+                                style={{
+                                  backgroundColor: '#dc2626',
+                                  color: '#ffffff',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  padding: '7px 16px',
+                                  fontSize: '12px',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  fontFamily: 'Arial, Helvetica, sans-serif',
+                                  boxShadow: '0 2px 6px rgba(220, 38, 38, 0.25)'
+                                }}
+                              >
+                                <RefreshCw size={14} /> Re-upload
+                              </button>
+                            </>
+                          )}
                         </div>
-                      )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -971,7 +1401,7 @@ export const PersonalDashboard: React.FC = () => {
             </div>
 
             {/* Official issued documents section */}
-            <div style={{ marginTop: '32px', borderTop: '1px solid var(--outline-variant)', paddingTop: '24px' }}>
+            <div style={{ borderTop: '1px solid var(--outline-variant)', paddingTop: '24px' }}>
               <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#461300', margin: '0 0 14px 0' }}>
                 Official Issued Certificates &amp; Gazette Notices
               </h4>
@@ -1045,6 +1475,115 @@ export const PersonalDashboard: React.FC = () => {
         onClose={() => setSelectedViewerDoc(null)}
         document={selectedViewerDoc}
       />
+
+      {/* ── Landowner Rejection Reason & Action Modal ── */}
+      {selectedReasonDoc && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '20px',
+          fontFamily: 'Arial, Helvetica, sans-serif'
+        }}>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            maxWidth: '560px',
+            width: '100%',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+            overflow: 'hidden',
+            border: '1px solid #cbd5e1'
+          }}>
+            <div style={{ backgroundColor: '#991b1b', color: '#ffffff', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <AlertTriangle size={20} color="#fca5a5" />
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>
+                  Rejection Notice &amp; Required Action
+                </h3>
+              </div>
+              <button onClick={() => setSelectedReasonDoc(null)} style={{ background: 'none', border: 'none', color: '#ffffff', cursor: 'pointer' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <h4 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>
+                  {selectedReasonDoc.title}
+                </h4>
+                <div style={{ fontSize: '12px', color: '#64748b' }}>
+                  Ref: {selectedReasonDoc.documentId || 'N/A'} • Submitted Version: Version {selectedReasonDoc.version || 1}
+                </div>
+              </div>
+
+              {/* Rejection Notice */}
+              <div style={{ backgroundColor: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: '8px', padding: '14px 16px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 800, color: '#991b1b', marginBottom: '6px', textTransform: 'uppercase' }}>
+                  Officer Findings (District Land Acquisition Office):
+                </div>
+                <div style={{ fontSize: '14px', color: '#7f1d1d', fontWeight: 600, lineHeight: 1.5 }}>
+                  {selectedReasonDoc.rejectionReason}
+                </div>
+                {selectedReasonDoc.rejectionRemarks && (
+                  <div style={{ fontSize: '12px', color: '#7f1d1d', marginTop: '6px', borderTop: '1px dashed #fca5a5', paddingTop: '6px' }}>
+                    <strong>Officer Remarks:</strong> {selectedReasonDoc.rejectionRemarks}
+                  </div>
+                )}
+              </div>
+
+              {/* Action Required Box */}
+              <div style={{ backgroundColor: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '8px', padding: '12px 14px', fontSize: '13px', color: '#9a3412' }}>
+                <strong>Required Action:</strong>
+                <div style={{ marginTop: '4px' }}>
+                  Please obtain a clear and updated copy addressing the officer remarks above and re-upload. Your re-submission will be logged as <strong>Version {(selectedReasonDoc.version || 1) + 1}</strong> and immediately routed back to the verification queue.
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedReasonDoc(null)}
+                  style={{ padding: '9px 18px', borderRadius: '6px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const slug = selectedReasonDoc.slug;
+                    const docId = selectedReasonDoc.documentId;
+                    setSelectedReasonDoc(null);
+                    navigate(`/personal/documents/upload/${slug}${docId ? `?reupload=${docId}` : ''}`);
+                  }}
+                  style={{
+                    padding: '9px 20px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    backgroundColor: '#dc2626',
+                    color: '#ffffff',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 2px 6px rgba(220, 38, 38, 0.25)'
+                  }}
+                >
+                  <RefreshCw size={15} /> Re-upload Corrected Document
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Landowner Re-Upload Modal ── */}
       {reuploadModalDoc && (

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Map as MapIcon,
   MapPin,
@@ -36,7 +36,8 @@ import {
   fetchGisZones,
   fetchProjectConstraints,
   updateZoneClearance,
-  fetchParcelConstraints
+  fetchParcelConstraints,
+  getStoredUser
 } from '../services/api';
 import type {
   GISFeatureCollection,
@@ -47,9 +48,20 @@ import type {
   ParcelConstraintsReport,
   ClearanceReviewStatus
 } from '../services/api';
+import LandownerGISExplorer from './LandownerGISExplorer';
 
 const GISExplorer: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const user = getStoredUser();
+
+  // If user is a Landowner (PERSONAL) or on the general /gis page (non-government), render the dedicated Landowner GIS Explorer
+  const isGovernmentOfficer = (user?.role === 'GOVERNMENT' || user?.user_type === 'GOVERNMENT' || user?.role === 'AGENCY' || user?.user_type === 'AGENCY') && location.pathname.startsWith('/government');
+
+  if (!isGovernmentOfficer) {
+    return <LandownerGISExplorer />;
+  }
+
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
 

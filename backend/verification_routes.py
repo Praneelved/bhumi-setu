@@ -50,12 +50,18 @@ class ApproveStageRequest(BaseModel):
     officer_id: str
     remarks: str
 
+from pydantic import BaseModel, Field
+
 class DocumentUploadRequest(BaseModel):
-    document_id: Optional[str] = None # Present when re-uploading a rejected document
-    document_type: str
+    document_id: Optional[str] = Field(None, alias="documentId")
+    document_type: Optional[str] = Field(None, alias="documentType")
     title: Optional[str] = None
     pages: List[Dict[str, Any]] = []
-    uploaded_by: str = "Balwant Singh (Landowner)"
+    uploaded_by: str = Field("Balwant Singh (Landowner)", alias="uploadedBy")
+
+    class Config:
+        allow_population_by_field_name = True
+        populate_by_name = True
 
 # ----------------- Endpoints -----------------
 
@@ -217,7 +223,11 @@ async def approve_central(case_id: str, req: ApproveStageRequest, request: Reque
     except ValueError as ve:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
-# 4. Landowner Upload & Re-upload
+# 4. Landowner Documents Dashboard & Upload
+@router.get("/cases/{case_id}/landowner-documents")
+def get_landowner_documents(case_id: str):
+    return vs.get_landowner_documents_summary(case_id)
+
 @router.post("/cases/{case_id}/documents/upload")
 async def upload_document(case_id: str, req: DocumentUploadRequest):
     try:
@@ -226,9 +236,15 @@ async def upload_document(case_id: str, req: DocumentUploadRequest):
             req.pages, req.uploaded_by
         )
         await sio.emit("verification_case_updated", {"caseId": case_id, "stage": "LANDOWNER_PORTAL", "action": "DOCUMENT_UPLOADED"})
-        return updated
+        summary = vs.get_landowner_documents_summary(case_id)
+        return {
+            "case": updated,
+            "dashboard": summary
+        }
     except ValueError as ve:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 @router.get("/cases/{case_id}/notifications")
 def get_notifications(case_id: str):

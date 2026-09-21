@@ -18,6 +18,7 @@ const DOCUMENT_TYPES: DocumentType[] = [
   'LAND_TAX_RECEIPT',
   'CADASTRAL_SURVEY_MAP',
   'BANK_ACCOUNT_CHEQUE',
+  'ENCUMBRANCE_CERTIFICATE',
   'FIELD_INSPECTION_REPORT',
   'OTHER_SUPPORTING'
 ];
@@ -31,6 +32,7 @@ const TYPE_DESCRIPTIONS: Record<DocumentType, string> = {
   LAND_TAX_RECEIPT: 'Land revenue or property tax payment receipt',
   CADASTRAL_SURVEY_MAP: 'Survey / cadastral map with khasra boundaries',
   BANK_ACCOUNT_CHEQUE: 'Cancelled cheque or bank passbook for DBT',
+  ENCUMBRANCE_CERTIFICATE: 'Sub-registrar encumbrance certificate (Form 15/16)',
   FIELD_INSPECTION_REPORT: 'Field Inspection & Physical Verification Report',
   OTHER_SUPPORTING: 'Any other relevant supporting document'
 };

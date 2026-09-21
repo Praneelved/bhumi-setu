@@ -279,3 +279,58 @@ export async function resetVerificationCase(caseId: string = "LA-2026-001"): Pro
   return res.json();
 }
 
+export interface LandownerDocumentItem {
+  documentId: string | null;
+  documentType: string;
+  slug: string;
+  title: string;
+  subtitle: string;
+  acceptedFormats: string;
+  maxSizeMb: number;
+  isMandatory: boolean;
+  isUploaded: boolean;
+  version: number;
+  status: 'NOT_UPLOADED' | 'PENDING_VERIFICATION' | 'VERIFIED' | 'REJECTED';
+  displayStatus: string;
+  action: 'UPLOAD' | 'VIEW' | 'REUPLOAD';
+  districtStatus: string;
+  stateStatus: string;
+  centralStatus: string;
+  uploadedDate: string | null;
+  uploadedBy: string | null;
+  verifiedAt?: string | null;
+  verifiedBy?: string | null;
+  rejectionReason?: string | null;
+  rejectionRemarks?: string | null;
+  requiredCorrection?: string | null;
+  totalPages: number;
+  pages: any[];
+  history: any[];
+}
+
+export interface LandownerDocumentsDashboard {
+  caseId: string;
+  currentStage: string;
+  documents: LandownerDocumentItem[];
+  summary: {
+    verified: number;
+    pending: number;
+    required: number;
+    actionRequired: number;
+    totalRequired: number;
+  };
+  stageProgress: {
+    district: { title: string; statusText: string; isComplete: boolean; isLocked: boolean; isActive: boolean };
+    state: { title: string; statusText: string; isComplete: boolean; isLocked: boolean; isActive: boolean };
+    central: { title: string; statusText: string; isComplete: boolean; isLocked: boolean; isActive: boolean };
+  };
+}
+
+export async function fetchLandownerDocumentsSummary(caseId: string = 'LA-2026-001'): Promise<LandownerDocumentsDashboard> {
+  const res = await fetch(`${API_BASE}/cases/${caseId}/landowner-documents`);
+  if (!res.ok) {
+    throw new Error('Failed to fetch landowner documents summary');
+  }
+  return res.json();
+}
+

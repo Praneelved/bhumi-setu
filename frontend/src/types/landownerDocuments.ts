@@ -9,6 +9,7 @@ export type DocumentType =
   | 'LAND_TAX_RECEIPT'
   | 'CADASTRAL_SURVEY_MAP'
   | 'BANK_ACCOUNT_CHEQUE'
+  | 'ENCUMBRANCE_CERTIFICATE'
   | 'FIELD_INSPECTION_REPORT'
   | 'OTHER_SUPPORTING';
 
@@ -50,13 +51,14 @@ export interface SubmittedDocument {
 // ─── Document Type Labels (configurable from backend later) ───────────────────
 export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
   LAND_OWNERSHIP_RECORD: 'Land Ownership Record',
-  SALE_DEED: 'Sale Deed / Registry',
+  SALE_DEED: 'Sale Deed / Title Document',
   SEVEN_TWELVE_EXTRACT: '7/12 Extract',
   PROPERTY_CARD: 'Property Card',
-  AADHAAR_IDENTITY: 'Aadhaar / Identity Proof',
+  AADHAAR_IDENTITY: 'Identity Proof',
   LAND_TAX_RECEIPT: 'Land Tax Receipt',
-  CADASTRAL_SURVEY_MAP: 'Cadastral / Survey Map',
-  BANK_ACCOUNT_CHEQUE: 'Bank Account / Cancelled Cheque',
+  CADASTRAL_SURVEY_MAP: 'Land Parcel / Survey Map',
+  BANK_ACCOUNT_CHEQUE: 'Bank Account / Beneficiary Details',
+  ENCUMBRANCE_CERTIFICATE: 'Encumbrance Certificate',
   FIELD_INSPECTION_REPORT: 'Field Inspection & Physical Verification Report',
   OTHER_SUPPORTING: 'Other Supporting Document'
 };

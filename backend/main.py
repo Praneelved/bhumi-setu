@@ -59,6 +59,9 @@ fastapi_app.add_middleware(
 from verification_routes import router as verification_router
 fastapi_app.include_router(verification_router)
 
+from personal_gis_routes import router as personal_gis_router
+fastapi_app.include_router(personal_gis_router)
+
 # ----------------- Request / Response Models -----------------
 
 class GovLoginRequest(BaseModel):

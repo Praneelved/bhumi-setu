@@ -37,18 +37,142 @@ INITIAL_CENTRAL_CHECKLIST = [
     {"id": "CC-08", "label": "Statutory digital certificate & final approval seal", "description": "Final digital certificate of land acquisition authorization sealed.", "verified": False, "mandatory": True}
 ]
 
+REQUIRED_LANDOWNER_DOCUMENTS = [
+    {
+        "type": "LAND_OWNERSHIP_RECORD",
+        "slug": "land-ownership",
+        "title": "Land Ownership Record",
+        "subtitle": "Title deed, 7/12 extract, Sanad, or mutation register entry (Form 6)",
+        "acceptedFormats": "PDF, JPG, JPEG, PNG",
+        "maxSizeMb": 10,
+        "isMandatory": True
+    },
+    {
+        "type": "SALE_DEED",
+        "slug": "sale-deed",
+        "title": "Sale Deed / Title Document",
+        "subtitle": "Registered conveyance or purchase deed with Sub-Registrar endorsement",
+        "acceptedFormats": "PDF, JPG, JPEG, PNG",
+        "maxSizeMb": 10,
+        "isMandatory": True
+    },
+    {
+        "type": "AADHAAR_IDENTITY",
+        "slug": "identity-proof",
+        "title": "Identity Proof",
+        "subtitle": "Aadhaar Card, Voter ID, or government photo identity document",
+        "acceptedFormats": "PDF, JPG, JPEG, PNG",
+        "maxSizeMb": 10,
+        "isMandatory": True
+    },
+    {
+        "type": "CADASTRAL_SURVEY_MAP",
+        "slug": "survey-map",
+        "title": "Land Parcel / Survey Map",
+        "subtitle": "Cadastral map sheet, DGPS survey coordinates, or boundary demarcation map",
+        "acceptedFormats": "PDF, JPG, JPEG, PNG",
+        "maxSizeMb": 10,
+        "isMandatory": True
+    },
+    {
+        "type": "ENCUMBRANCE_CERTIFICATE",
+        "slug": "encumbrance-certificate",
+        "title": "Encumbrance Certificate",
+        "subtitle": "Form 15/16 non-encumbrance certificate from Sub-Registrar office",
+        "acceptedFormats": "PDF, JPG, JPEG, PNG",
+        "maxSizeMb": 10,
+        "isMandatory": True
+    },
+    {
+        "type": "BANK_ACCOUNT_CHEQUE",
+        "slug": "bank-account",
+        "title": "Bank Account / Beneficiary Details",
+        "subtitle": "Cancelled cheque leaf or bank passbook copy for compensation Direct Benefit Transfer (DBT)",
+        "acceptedFormats": "PDF, JPG, JPEG, PNG",
+        "maxSizeMb": 10,
+        "isMandatory": True
+    },
+    {
+        "type": "SEVEN_TWELVE_EXTRACT",
+        "slug": "712-extract",
+        "title": "7/12 Extract",
+        "subtitle": "Official Village Form VII-XII record of rights with current crops & occupancy",
+        "acceptedFormats": "PDF, JPG, JPEG, PNG",
+        "maxSizeMb": 10,
+        "isMandatory": False
+    }
+]
+
+SLUG_TO_DOC_TYPE = {
+    "land-ownership": "LAND_OWNERSHIP_RECORD",
+    "sale-deed": "SALE_DEED",
+    "identity-proof": "AADHAAR_IDENTITY",
+    "survey-map": "CADASTRAL_SURVEY_MAP",
+    "encumbrance-certificate": "ENCUMBRANCE_CERTIFICATE",
+    "bank-account": "BANK_ACCOUNT_CHEQUE",
+    "712-extract": "SEVEN_TWELVE_EXTRACT",
+    "LAND_OWNERSHIP_RECORD": "LAND_OWNERSHIP_RECORD",
+    "LAND_OWNERSHIP": "LAND_OWNERSHIP_RECORD",
+    "SALE_DEED": "SALE_DEED",
+    "AADHAAR_IDENTITY": "AADHAAR_IDENTITY",
+    "CADASTRAL_SURVEY_MAP": "CADASTRAL_SURVEY_MAP",
+    "ENCUMBRANCE_CERTIFICATE": "ENCUMBRANCE_CERTIFICATE",
+    "BANK_ACCOUNT_CHEQUE": "BANK_ACCOUNT_CHEQUE",
+    "BANK_ACCOUNT_DETAILS": "BANK_ACCOUNT_CHEQUE",
+    "SEVEN_TWELVE_EXTRACT": "SEVEN_TWELVE_EXTRACT",
+    "FIELD_INSPECTION_REPORT": "CADASTRAL_SURVEY_MAP",
+    "OTHER_SUPPORTING": "OTHER_SUPPORTING"
+}
+
+TYPE_TO_SLUG = {
+    "LAND_OWNERSHIP_RECORD": "land-ownership",
+    "LAND_OWNERSHIP": "land-ownership",
+    "SALE_DEED": "sale-deed",
+    "AADHAAR_IDENTITY": "identity-proof",
+    "IDENTITY_PROOF": "identity-proof",
+    "CADASTRAL_SURVEY_MAP": "survey-map",
+    "SURVEY_MAP": "survey-map",
+    "ENCUMBRANCE_CERTIFICATE": "encumbrance-certificate",
+    "BANK_ACCOUNT_CHEQUE": "bank-account",
+    "BANK_ACCOUNT_DETAILS": "bank-account",
+    "SEVEN_TWELVE_EXTRACT": "712-extract",
+    "FIELD_INSPECTION_REPORT": "survey-map",
+    "OTHER_SUPPORTING": "other-supporting"
+}
+
+TYPE_TO_TITLE = {
+    "LAND_OWNERSHIP_RECORD": "Land Ownership Record",
+    "LAND_OWNERSHIP": "Land Ownership Record",
+    "SALE_DEED": "Sale Deed / Title Document",
+    "AADHAAR_IDENTITY": "Identity Proof",
+    "CADASTRAL_SURVEY_MAP": "Land Parcel / Survey Map",
+    "ENCUMBRANCE_CERTIFICATE": "Encumbrance Certificate",
+    "BANK_ACCOUNT_CHEQUE": "Bank Account / Beneficiary Details",
+    "SEVEN_TWELVE_EXTRACT": "7/12 Extract",
+    "OTHER_SUPPORTING": "Other Supporting Document"
+}
+
 INITIAL_DOCUMENTS = [
     {
         "id": "DOC-001",
         "doc_number": "01",
         "title": "Land Ownership Record",
-        "type": "LAND_OWNERSHIP",
-        "status": "PENDING",
+        "type": "LAND_OWNERSHIP_RECORD",
+        "status": "VERIFIED",
         "total_pages": 2,
         "required_for_stage": ["DISTRICT_COLLECTOR"],
         "uploaded_date": "10 Sep 2026",
-        "uploaded_by": "Demo Landowner",
+        "uploaded_by": "Balwant Singh (Landowner)",
         "version": 1,
+        "verified_at": "12 Sep 2026, 11:30 AM",
+        "verified_by": "Dr. Rajesh Sharma, IAS (District Collector)",
+        "rejection_category": None,
+        "rejection_reason": None,
+        "rejection_remarks": None,
+        "required_correction": None,
+        "rejected_at": None,
+        "rejected_by": None,
+        "history_json": "[]",
         "pages": [
             {
                 "pageNumber": 1,
@@ -57,12 +181,12 @@ INITIAL_DOCUMENTS = [
                 "khasraNumbers": ["124/2"],
                 "areaHa": 2.40,
                 "officialRef": "SANAD-DEMO-2026-124",
-                "landowner": "Demo Landowner",
-                "village": "Demo Village",
-                "taluka": "Demo Taluka",
-                "district": "Demo District",
-                "state": "Demo State",
-                "statusLabel": "PENDING DISTRICT VERIFICATION"
+                "landowner": "Balwant Singh",
+                "village": "Hinjawadi",
+                "taluka": "Mulshi",
+                "district": "Pune",
+                "state": "Maharashtra",
+                "statusLabel": "VERIFIED BY DISTRICT"
             },
             {
                 "pageNumber": 2,
@@ -75,46 +199,23 @@ INITIAL_DOCUMENTS = [
     {
         "id": "DOC-002",
         "doc_number": "02",
-        "title": "7/12 Extract / Land Record",
-        "type": "SEVEN_TWELVE_EXTRACT",
-        "status": "PENDING",
-        "total_pages": 2,
-        "required_for_stage": ["DISTRICT_COLLECTOR"],
-        "uploaded_date": "10 Sep 2026",
-        "uploaded_by": "Demo Landowner",
-        "version": 1,
-        "pages": [
-            {
-                "pageNumber": 1,
-                "title": "Form VII-XII Record of Rights",
-                "contentHeading": "DEMO DOCUMENT — FOR SIH PROTOTYPE",
-                "khasraNumbers": ["124/3"],
-                "discrepancyNotice": "Demonstration Discrepancy: Khasra number indicates 124/3 on extract sheet while registered parcel is 124/2.",
-                "areaHa": 2.40,
-                "landowner": "Demo Landowner",
-                "village": "Demo Village",
-                "taluka": "Demo Taluka",
-                "district": "Demo District",
-                "landType": "Dry Agricultural (Jirayat)"
-            },
-            {
-                "pageNumber": 2,
-                "title": "Form 6 Mutation Register Entries",
-                "contentHeading": "Succession & Lawful Possession Attestation (Talathi Endorsement)"
-            }
-        ]
-    },
-    {
-        "id": "DOC-003",
-        "doc_number": "03",
-        "title": "Registered Sale Deed",
+        "title": "Sale Deed / Title Document",
         "type": "SALE_DEED",
         "status": "PENDING",
         "total_pages": 3,
         "required_for_stage": ["DISTRICT_COLLECTOR"],
         "uploaded_date": "10 Sep 2026",
-        "uploaded_by": "Demo Landowner",
+        "uploaded_by": "Balwant Singh (Landowner)",
         "version": 1,
+        "verified_at": None,
+        "verified_by": None,
+        "rejection_category": None,
+        "rejection_reason": None,
+        "rejection_remarks": None,
+        "required_correction": None,
+        "rejected_at": None,
+        "rejected_by": None,
+        "history_json": "[]",
         "pages": [
             {
                 "pageNumber": 1,
@@ -122,7 +223,7 @@ INITIAL_DOCUMENTS = [
                 "contentHeading": "DEMO DOCUMENT — FOR SIH PROTOTYPE",
                 "officialRef": "DEED-REG-2021-99882",
                 "seller": "Fictional Vendor (Ramesh Sharma)",
-                "buyer": "Demo Landowner",
+                "buyer": "Balwant Singh",
                 "registrationDate": "14 May 2021",
                 "khasraNumbers": ["124/2"],
                 "areaHa": 2.40
@@ -140,57 +241,73 @@ INITIAL_DOCUMENTS = [
         ]
     },
     {
-        "id": "DOC-004",
-        "doc_number": "04",
-        "title": "Land Parcel Map (Cadastral GIS Map)",
-        "type": "CADASTRAL_SURVEY_MAP",
-        "status": "PENDING",
-        "total_pages": 2,
+        "id": "DOC-003",
+        "doc_number": "03",
+        "title": "Encumbrance Certificate",
+        "type": "ENCUMBRANCE_CERTIFICATE",
+        "status": "REJECTED",
+        "total_pages": 1,
         "required_for_stage": ["DISTRICT_COLLECTOR"],
         "uploaded_date": "10 Sep 2026",
-        "uploaded_by": "Demo Landowner",
+        "uploaded_by": "Balwant Singh (Landowner)",
         "version": 1,
+        "verified_at": None,
+        "verified_by": None,
+        "rejection_category": "DOCUMENT_UNCLEAR",
+        "rejection_reason": "Document is unclear / illegible sub-registrar seal.",
+        "rejection_remarks": "Please upload a clear, high-resolution scanned copy with visible seal.",
+        "required_correction": "Re-upload clean scanned copy of Form 15/16 Non-Encumbrance Certificate.",
+        "rejected_at": "11 Sep 2026, 04:15 PM",
+        "rejected_by": "Dr. Rajesh Sharma, IAS (District Collector)",
+        "history_json": "[]",
         "pages": [
             {
                 "pageNumber": 1,
-                "title": "Cadastral Map Sheet #14 - Survey 124/2",
-                "contentHeading": "DEMO GIS DOCUMENT — FOR SIH PROTOTYPE",
-                "officialRef": "GIS-CAD-DEMO-001",
-                "khasraNumbers": ["124/2"],
-                "areaHa": 2.40,
-                "village": "Demo Village",
-                "district": "Demo District",
-                "scale": "1:2000 Metric",
-                "northArrow": "North [↑ N]",
-                "boundaryCoordinates": "18.5912° N, 73.7385° E to 18.5925° N, 73.7440° E"
-            },
-            {
-                "pageNumber": 2,
-                "title": "Joint Measurement Survey (JMS) Coordinates",
-                "contentHeading": "4 ETRF-2000 GIS Pillar Geo-tag Demarcation Points Certified"
+                "title": "Non-Encumbrance Certificate (Form 15)",
+                "contentHeading": "DEMO DOCUMENT — FOR SIH PROTOTYPE (ILLEGIBLE SEAL DEMO)",
+                "officialRef": "EC-DEMO-2026-88319",
+                "landowner": "Balwant Singh",
+                "surveyNo": "124/2"
             }
         ]
     },
     {
-        "id": "DOC-005",
-        "doc_number": "05",
-        "title": "Identity & Citizenship Document (e-KYC)",
-        "type": "AADHAAR_IDENTITY",
+        "id": "DOC-004",
+        "doc_number": "04",
+        "title": "7/12 Extract",
+        "type": "SEVEN_TWELVE_EXTRACT",
         "status": "PENDING",
-        "total_pages": 1,
+        "total_pages": 2,
         "required_for_stage": ["DISTRICT_COLLECTOR"],
         "uploaded_date": "10 Sep 2026",
-        "uploaded_by": "Demo Landowner",
+        "uploaded_by": "Balwant Singh (Landowner)",
         "version": 1,
+        "verified_at": None,
+        "verified_by": None,
+        "rejection_category": None,
+        "rejection_reason": None,
+        "rejection_remarks": None,
+        "required_correction": None,
+        "rejected_at": None,
+        "rejected_by": None,
+        "history_json": "[]",
         "pages": [
             {
                 "pageNumber": 1,
-                "title": "Fictional Government e-KYC Identity Verification",
-                "contentHeading": "DEMO DOCUMENT — FOR SIH PROTOTYPE (FICTIONAL)",
-                "idNumber": "DEMO-ID-9928-XXXX-001",
-                "landowner": "Demo Landowner",
-                "dob": "12/08/1976",
-                "address": "House No. 42, Demo Village, Demo Taluka, Demo District, Demo State - 411057"
+                "title": "Form VII-XII Record of Rights",
+                "contentHeading": "DEMO DOCUMENT — FOR SIH PROTOTYPE",
+                "khasraNumbers": ["124/2"],
+                "areaHa": 2.40,
+                "landowner": "Balwant Singh",
+                "village": "Hinjawadi",
+                "taluka": "Mulshi",
+                "district": "Pune",
+                "landType": "Dry Agricultural (Jirayat)"
+            },
+            {
+                "pageNumber": 2,
+                "title": "Form 6 Mutation Register Entries",
+                "contentHeading": "Succession & Lawful Possession Attestation (Talathi Endorsement)"
             }
         ]
     }
@@ -311,8 +428,10 @@ def seed_verification_cases_if_empty(conn):
         cursor.execute("""
         INSERT INTO verification_documents (
             id, case_id, doc_number, title, type, status, total_pages, pages_json,
-            uploaded_date, uploaded_by, version, required_for_stage
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+            uploaded_date, uploaded_by, version, required_for_stage,
+            verified_at, verified_by, rejection_category, rejection_reason,
+            rejection_remarks, required_correction, rejected_at, rejected_by, history_json
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
         """, (
             doc["id"],
             "LA-2026-001",
@@ -325,7 +444,16 @@ def seed_verification_cases_if_empty(conn):
             doc["uploaded_date"],
             doc["uploaded_by"],
             doc["version"],
-            json.dumps(doc["required_for_stage"])
+            json.dumps(doc["required_for_stage"]),
+            doc.get("verified_at"),
+            doc.get("verified_by"),
+            doc.get("rejection_category"),
+            doc.get("rejection_reason"),
+            doc.get("rejection_remarks"),
+            doc.get("required_correction"),
+            doc.get("rejected_at"),
+            doc.get("rejected_by"),
+            doc.get("history_json", "[]")
         ))
 
     # Insert initial audit log
@@ -379,7 +507,13 @@ def get_verification_case(case_id: str) -> Optional[Dict[str, Any]]:
     case["totalParcels"] = case.pop("total_parcels")
     case["affectedFamilies"] = case.pop("affected_families")
     case["submittedDate"] = case.pop("submitted_date")
-    case["lastUpdated"] = case.get("updated_at").strftime("%d %b %Y, %I:%M %p") if case.get("updated_at") else ""
+    updated_at_val = case.get("updated_at")
+    if hasattr(updated_at_val, "strftime"):
+        case["lastUpdated"] = updated_at_val.strftime("%d %b %Y, %I:%M %p")
+    elif updated_at_val:
+        case["lastUpdated"] = str(updated_at_val)
+    else:
+        case["lastUpdated"] = ""
 
     # Fetch documents
     cur.execute("SELECT * FROM verification_documents WHERE case_id = %s ORDER BY doc_number ASC;", (case_id,))
@@ -1035,12 +1169,24 @@ def upload_or_resubmit_document(case_id: str, doc_id: Optional[str], document_ty
     cur = conn.cursor()
     now = datetime.datetime.now(datetime.timezone.utc).strftime("%d %b %Y, %I:%M %p")
 
+    actual_type = SLUG_TO_DOC_TYPE.get(document_type, document_type)
+
     # Check if this is a resubmission of an existing document
     if doc_id:
         cur.execute("SELECT * FROM verification_documents WHERE id = %s AND case_id = %s;", (doc_id, case_id))
         doc = cur.fetchone()
     else:
         doc = None
+
+    if not doc and actual_type:
+        cur.execute("""
+        SELECT * FROM verification_documents 
+        WHERE case_id = %s AND (type = %s OR type = %s)
+        ORDER BY version DESC LIMIT 1;
+        """, (case_id, actual_type, actual_type.replace('_RECORD', '')))
+        doc = cur.fetchone()
+        if doc:
+            doc_id = doc["id"]
 
     if doc:
         new_version = doc["version"] + 1
@@ -1090,7 +1236,7 @@ def upload_or_resubmit_document(case_id: str, doc_id: Optional[str], document_ty
         if isinstance(active_rej, str):
             active_rej = json.loads(active_rej)
 
-        if active_rej and active_rej.get("documentId") == doc_id:
+        if active_rej and (active_rej.get("documentId") == doc_id or active_rej.get("documentId") == doc["id"]):
             stages[cur_stage]["status"] = "ACTIVE"
             cur.execute("""
             UPDATE verification_cases
@@ -1106,11 +1252,11 @@ def upload_or_resubmit_document(case_id: str, doc_id: Optional[str], document_ty
             cur, case_id, "LANDOWNER", "Landowner Portal",
             uploaded_by, "LANDOWNER", "DOCUMENT_RESUBMITTED",
             f"Landowner re-uploaded corrected document '{doc['title']}' (v{new_version}). Ready for re-verification.",
-            doc_id=doc_id, doc_title=doc["title"], new_status="PENDING"
+            doc_id=doc_id or doc["id"], doc_title=doc["title"], new_status="PENDING"
         )
 
         send_viasocket_document_event("document.resubmitted", {
-            "document_id": doc_id,
+            "document_id": doc_id or doc["id"],
             "case_id": case_id,
             "landowner_id": uploaded_by,
             "document_name": doc["title"],
@@ -1123,22 +1269,23 @@ def upload_or_resubmit_document(case_id: str, doc_id: Optional[str], document_ty
         cur.execute("SELECT COUNT(*) as c FROM verification_documents WHERE case_id = %s;", (case_id,))
         count = cur.fetchone()["c"] + 1
         doc_num = f"{count:02d}"
+        doc_title = title or TYPE_TO_TITLE.get(actual_type, actual_type)
 
         cur.execute("""
         INSERT INTO verification_documents (
             id, case_id, doc_number, title, type, status, total_pages, pages_json,
-            uploaded_date, uploaded_by, version, required_for_stage
-        ) VALUES (%s, %s, %s, %s, %s, 'PENDING', %s, %s, %s, %s, 1, '["DISTRICT_COLLECTOR"]'::jsonb);
+            uploaded_date, uploaded_by, version, required_for_stage, history_json
+        ) VALUES (%s, %s, %s, %s, %s, 'PENDING', %s, %s, %s, %s, 1, %s, '[]');
         """, (
-            new_doc_id, case_id, doc_num, title or document_type, document_type,
-            len(pages), json.dumps(pages), now, uploaded_by
+            new_doc_id, case_id, doc_num, doc_title, actual_type,
+            len(pages), json.dumps(pages), now, uploaded_by, json.dumps(["DISTRICT_COLLECTOR"])
         ))
 
         log_audit(
             cur, case_id, "LANDOWNER", "Landowner Portal",
             uploaded_by, "LANDOWNER", "DOCUMENT_UPLOADED",
-            f"Landowner uploaded new document '{title or document_type}' ({len(pages)} pages).",
-            doc_id=new_doc_id, doc_title=title or document_type, new_status="PENDING"
+            f"Landowner uploaded new document '{doc_title}' ({len(pages)} pages).",
+            doc_id=new_doc_id, doc_title=doc_title, new_status="PENDING"
         )
 
     conn.commit()
@@ -1240,8 +1387,10 @@ def reset_verification_case(case_id: str = "LA-2026-001") -> Dict[str, Any]:
         cur.execute("""
         INSERT INTO verification_documents (
             id, case_id, doc_number, title, type, status, total_pages, pages_json,
-            uploaded_date, uploaded_by, version, required_for_stage
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+            uploaded_date, uploaded_by, version, required_for_stage,
+            verified_at, verified_by, rejection_category, rejection_reason,
+            rejection_remarks, required_correction, rejected_at, rejected_by, history_json
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
         """, (
             doc["id"],
             case_id,
@@ -1254,7 +1403,16 @@ def reset_verification_case(case_id: str = "LA-2026-001") -> Dict[str, Any]:
             doc["uploaded_date"],
             doc["uploaded_by"],
             doc["version"],
-            json.dumps(doc["required_for_stage"])
+            json.dumps(doc["required_for_stage"]),
+            doc.get("verified_at"),
+            doc.get("verified_by"),
+            doc.get("rejection_category"),
+            doc.get("rejection_reason"),
+            doc.get("rejection_remarks"),
+            doc.get("required_correction"),
+            doc.get("rejected_at"),
+            doc.get("rejected_by"),
+            doc.get("history_json", "[]")
         ))
 
     log_audit(
@@ -1266,4 +1424,246 @@ def reset_verification_case(case_id: str = "LA-2026-001") -> Dict[str, Any]:
     conn.commit()
     conn.close()
     return get_verification_case(case_id)
+
+
+def get_landowner_documents_summary(case_id: str) -> Dict[str, Any]:
+    """
+    Returns the comprehensive, multi-tier document status dashboard for the landowner.
+    Strictly calculates status on backend per RFCTLARR 2013 District -> State -> Central hierarchy.
+    """
+    conn = get_db()
+    cur = conn.cursor()
+
+    # 1. Fetch case for stage status
+    cur.execute("SELECT current_stage, workflow_status, overall_status, stages_json FROM verification_cases WHERE id = %s;", (case_id,))
+    case_row = cur.fetchone()
+    if not case_row:
+        conn.close()
+        return {"caseId": case_id, "documents": [], "summary": {}, "stageProgress": {}}
+
+    stages = case_row["stages_json"]
+    if isinstance(stages, str):
+        try:
+            stages = json.loads(stages)
+        except Exception:
+            stages = {}
+    elif not stages:
+        stages = {}
+
+    current_stage = case_row["current_stage"]
+    district_stage = stages.get("DISTRICT_COLLECTOR", {}).get("status", "ACTIVE")
+    state_stage = stages.get("STATE_GOVERNMENT", {}).get("status", "LOCKED")
+    central_stage = stages.get("CENTRAL_MINISTRY", {}).get("status", "LOCKED")
+
+    # 2. Fetch all uploaded documents for this case
+    cur.execute("SELECT * FROM verification_documents WHERE case_id = %s ORDER BY doc_number ASC;", (case_id,))
+    raw_docs = [dict(r) for r in cur.fetchall()]
+    conn.close()
+
+    # Index raw docs by type and slug
+    docs_by_type: Dict[str, Dict[str, Any]] = {}
+    for d in raw_docs:
+        dtype = d.get("type", "")
+        docs_by_type[dtype] = d
+        if dtype == "LAND_OWNERSHIP":
+            docs_by_type["LAND_OWNERSHIP_RECORD"] = d
+        elif dtype == "LAND_OWNERSHIP_RECORD":
+            docs_by_type["LAND_OWNERSHIP"] = d
+        elif dtype == "BANK_ACCOUNT_DETAILS":
+            docs_by_type["BANK_ACCOUNT_CHEQUE"] = d
+        elif dtype == "BANK_ACCOUNT_CHEQUE":
+            docs_by_type["BANK_ACCOUNT_DETAILS"] = d
+
+    items = []
+    verified_count = 0
+    pending_count = 0
+    required_count = 0
+    action_required_count = 0
+
+    for req in REQUIRED_LANDOWNER_DOCUMENTS:
+        doc = docs_by_type.get(req["type"])
+        if doc:
+            doc_status = doc.get("status", "PENDING")
+            history = doc.get("history_json")
+            if isinstance(history, str):
+                try:
+                    history_list = json.loads(history)
+                except Exception:
+                    history_list = []
+            elif isinstance(history, list):
+                history_list = history
+            else:
+                history_list = []
+
+            pages = doc.get("pages_json")
+            if isinstance(pages, str):
+                try:
+                    pages_list = json.loads(pages)
+                except Exception:
+                    pages_list = []
+            elif isinstance(pages, list):
+                pages_list = pages
+            else:
+                pages_list = []
+
+            # Multi-tier statuses:
+            if doc_status == "VERIFIED":
+                verified_count += 1
+                dist_stat = "VERIFIED"
+                st_stat = "VERIFIED" if state_stage == "COMPLETED" else ("PENDING" if state_stage == "ACTIVE" else "LOCKED")
+                cen_stat = "VERIFIED" if central_stage == "COMPLETED" else ("PENDING" if central_stage == "ACTIVE" else "LOCKED")
+
+                if dist_stat == "VERIFIED" and st_stat == "VERIFIED" and cen_stat == "VERIFIED":
+                    disp_status = "✓ VERIFIED BY DISTRICT, STATE & CENTRAL"
+                elif dist_stat == "VERIFIED" and st_stat == "VERIFIED":
+                    disp_status = "✓ VERIFIED BY DISTRICT & STATE"
+                elif dist_stat == "VERIFIED" and st_stat == "PENDING":
+                    disp_status = "✓ VERIFIED BY DISTRICT · ⏳ PENDING STATE"
+                else:
+                    disp_status = "✓ VERIFIED BY DISTRICT"
+
+                overall = "VERIFIED"
+                act = "VIEW"
+            elif doc_status == "REJECTED":
+                action_required_count += 1
+                dist_stat = "REJECTED"
+                st_stat = "LOCKED"
+                cen_stat = "LOCKED"
+                disp_status = "✕ REJECTED BY DISTRICT"
+                overall = "REJECTED"
+                act = "REUPLOAD"
+            else:
+                pending_count += 1
+                dist_stat = "PENDING"
+                st_stat = "LOCKED"
+                cen_stat = "LOCKED"
+                disp_status = "⏳ PENDING DISTRICT VERIFICATION"
+                overall = "PENDING_VERIFICATION"
+                act = "VIEW"
+
+            items.append({
+                "documentId": doc["id"],
+                "documentType": req["type"],
+                "slug": req["slug"],
+                "title": req["title"],
+                "subtitle": req["subtitle"],
+                "acceptedFormats": req["acceptedFormats"],
+                "maxSizeMb": req["maxSizeMb"],
+                "isMandatory": req["isMandatory"],
+                "isUploaded": True,
+                "version": doc.get("version", 1),
+                "status": overall,
+                "displayStatus": disp_status,
+                "action": act,
+                "districtStatus": dist_stat,
+                "stateStatus": st_stat,
+                "centralStatus": cen_stat,
+                "uploadedDate": doc.get("uploaded_date") or "",
+                "uploadedBy": doc.get("uploaded_by") or "Landowner",
+                "verifiedAt": doc.get("verified_at"),
+                "verifiedBy": doc.get("verified_by"),
+                "rejectionReason": doc.get("rejection_reason"),
+                "rejectionRemarks": doc.get("rejection_remarks"),
+                "requiredCorrection": doc.get("required_correction"),
+                "totalPages": doc.get("total_pages", len(pages_list)),
+                "pages": pages_list,
+                "history": history_list
+            })
+        else:
+            required_count += 1
+            items.append({
+                "documentId": None,
+                "documentType": req["type"],
+                "slug": req["slug"],
+                "title": req["title"],
+                "subtitle": req["subtitle"],
+                "acceptedFormats": req["acceptedFormats"],
+                "maxSizeMb": req["maxSizeMb"],
+                "isMandatory": req["isMandatory"],
+                "isUploaded": False,
+                "version": 0,
+                "status": "NOT_UPLOADED",
+                "displayStatus": "● REQUIRED — NOT UPLOADED",
+                "action": "UPLOAD",
+                "districtStatus": "NOT_UPLOADED",
+                "stateStatus": "LOCKED",
+                "centralStatus": "LOCKED",
+                "uploadedDate": None,
+                "uploadedBy": None,
+                "verifiedAt": None,
+                "verifiedBy": None,
+                "rejectionReason": None,
+                "rejectionRemarks": None,
+                "requiredCorrection": None,
+                "totalPages": 0,
+                "pages": [],
+                "history": []
+            })
+
+    # Summary
+    summary = {
+        "verified": verified_count,
+        "pending": pending_count,
+        "required": required_count,
+        "actionRequired": action_required_count,
+        "totalRequired": len(items)
+    }
+
+    # Multi-tier stage progress
+    total_docs = len(items)
+    if district_stage == "COMPLETED":
+        dist_text = f"{total_docs} / {total_docs} ✓ Complete"
+    else:
+        dist_text = f"{verified_count} / {total_docs} verified"
+
+    if district_stage != "COMPLETED":
+        state_text = "Locked until District verification is complete"
+    elif state_stage == "COMPLETED":
+        state_text = f"{total_docs} / {total_docs} ✓ Complete"
+    elif state_stage == "ACTIVE":
+        state_text = f"0 / {total_docs} — Verification in progress"
+    else:
+        state_text = f"0 / {total_docs} — Verification available"
+
+    if state_stage != "COMPLETED":
+        central_text = "Locked until State verification is complete"
+    elif central_stage == "COMPLETED":
+        central_text = f"{total_docs} / {total_docs} ✓ Complete"
+    elif central_stage == "ACTIVE":
+        central_text = f"0 / {total_docs} — Verification in progress"
+    else:
+        central_text = f"0 / {total_docs} — Verification available"
+
+    stage_progress = {
+        "district": {
+            "title": "District Collector",
+            "statusText": dist_text,
+            "isComplete": district_stage == "COMPLETED",
+            "isLocked": False,
+            "isActive": district_stage == "ACTIVE"
+        },
+        "state": {
+            "title": "State Government",
+            "statusText": state_text,
+            "isComplete": state_stage == "COMPLETED",
+            "isLocked": district_stage != "COMPLETED",
+            "isActive": state_stage == "ACTIVE"
+        },
+        "central": {
+            "title": "Central Ministry",
+            "statusText": central_text,
+            "isComplete": central_stage == "COMPLETED",
+            "isLocked": state_stage != "COMPLETED",
+            "isActive": central_stage == "ACTIVE"
+        }
+    }
+
+    return {
+        "caseId": case_id,
+        "currentStage": current_stage,
+        "documents": items,
+        "summary": summary,
+        "stageProgress": stage_progress
+    }
+
 
