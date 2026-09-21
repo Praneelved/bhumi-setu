@@ -322,6 +322,7 @@ export const AgencyLogin: React.FC = () => {
               <OTPVerification
                 sessionId={mfaSession?.session_id || ''}
                 maskedPhone={mfaSession?.masked_phone || '+91 97*****026'}
+                devOtp={mfaSession?.dev_otp}
                 onVerify={handleMfaVerify}
                 onResend={async () => { await agencyAuth({ agencyId, officialEmail, password, sector, agencyRole }); }}
                 onBack={() => setMfaSession(null)}

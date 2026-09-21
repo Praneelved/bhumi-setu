@@ -316,6 +316,7 @@ export const GovernmentLogin: React.FC = () => {
               <OTPVerification
                 sessionId={mfaSession?.session_id || ''}
                 maskedPhone={mfaSession?.masked_phone || '+91 98*****842'}
+                devOtp={mfaSession?.dev_otp}
                 onVerify={handleMfaVerify}
                 onResend={async () => { await governmentAuth({ officialIdOrEmail: officialId, password }); }}
                 onBack={() => setMfaSession(null)}
