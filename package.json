@@ -1,0 +1,10 @@
+{
+  "name": "bhoomi-setu-root",
+  "version": "1.0.0",
+  "description": "Root workspace redirector",
+  "scripts": {
+    "tauri": "export PATH=\"$HOME/.cargo/bin:$PATH\" && cd frontend && npm run tauri",
+    "dev": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build"
+  }
+}
