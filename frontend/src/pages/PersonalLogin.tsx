@@ -3,12 +3,15 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Phone, ArrowLeft, ShieldAlert, CheckCircle2, User, KeyRound, Sparkles } from 'lucide-react';
 import { sendPersonalOTP, verifyPersonalOTP } from '../services/authService';
 import OTPVerification from '../components/auth/OTPVerification';
+import OfflineBanner from '../components/ui/OfflineBanner';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
 
 type Step = 'phone' | 'otp';
 
 export const PersonalLogin: React.FC = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>('phone');
+  const { isOnline, wasOffline } = useNetworkStatus();
 
   // Form inputs for Personal / Landowner ONLY (MUST NOT use email/password)
   const [mobileNumber, setMobileNumber] = useState('');
@@ -33,6 +36,11 @@ export const PersonalLogin: React.FC = () => {
     const cleaned = mobileNumber.replace(/\D/g, '');
     if (cleaned.length !== 10) {
       setError('Please enter a valid 10-digit mobile number.');
+      return;
+    }
+
+    if (!isOnline) {
+      setError('No internet connection. OTP cannot be sent without internet. Please reconnect and try again.');
       return;
     }
 
@@ -131,6 +139,8 @@ export const PersonalLogin: React.FC = () => {
           </Link>
 
 
+          <OfflineBanner isOnline={isOnline} wasOffline={wasOffline} />
+
           {error && (
             <div style={{
               backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b',
@@ -206,21 +216,22 @@ export const PersonalLogin: React.FC = () => {
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !isOnline}
                 style={{
                   width: '100%',
-                  backgroundColor: '#461300',
+                  backgroundColor: !isOnline ? '#94a3b8' : '#461300',
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: 'var(--radius-md)',
                   padding: '12px 16px',
                   fontSize: '14px',
                   fontWeight: 700,
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  boxShadow: '0 4px 12px rgba(70, 19, 0, 0.2)'
+                  cursor: (loading || !isOnline) ? 'not-allowed' : 'pointer',
+                  boxShadow: !isOnline ? 'none' : '0 4px 12px rgba(70, 19, 0, 0.2)',
+                  opacity: !isOnline ? 0.7 : 1
                 }}
               >
-                {loading ? 'Sending OTP Code...' : 'Send 6-Digit Mobile OTP'}
+                {loading ? 'Sending OTP Code...' : !isOnline ? '📵 No Internet — Cannot Send OTP' : 'Send 6-Digit Mobile OTP'}
               </button>
 
               <div style={{ marginTop: '20px', padding: '12px', backgroundColor: '#fff7ed', border: '1px solid #ffedd5', borderRadius: 'var(--radius-md)', fontSize: '11px', color: '#9a3412', lineHeight: 1.4 }}>

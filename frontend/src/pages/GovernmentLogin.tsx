@@ -3,12 +3,15 @@ import { useNavigate, Link } from 'react-router-dom';
 import { ShieldCheck, Eye, EyeOff, Lock, ArrowLeft, RefreshCw, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { governmentAuth, verifyMFA, type MFAResponse } from '../services/authService';
 import OTPVerification from '../components/auth/OTPVerification';
+import OfflineBanner from '../components/ui/OfflineBanner';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
 
 type Step = 'credentials' | 'mfa';
 
 export const GovernmentLogin: React.FC = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>('credentials');
+  const { isOnline, wasOffline } = useNetworkStatus();
 
   // Form inputs for Government
   const [officialId, setOfficialId] = useState('');
@@ -43,6 +46,11 @@ export const GovernmentLogin: React.FC = () => {
   const handleGovernmentLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (!isOnline) {
+      setError('No internet connection. OTP cannot be sent without internet. Please reconnect and try again.');
+      return;
+    }
 
     if (!officialId.trim()) {
       setError('Please enter your Government Official ID or Email.');
@@ -147,6 +155,8 @@ export const GovernmentLogin: React.FC = () => {
             <ArrowLeft size={14} /> Back to Role Selection
           </Link>
 
+
+          <OfflineBanner isOnline={isOnline} wasOffline={wasOffline} />
 
           {error && (
             <div style={{
@@ -285,21 +295,22 @@ export const GovernmentLogin: React.FC = () => {
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !isOnline}
                 style={{
                   width: '100%',
-                  backgroundColor: '#0a2540',
+                  backgroundColor: !isOnline ? '#94a3b8' : '#0a2540',
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: 'var(--radius-md)',
                   padding: '12px 16px',
                   fontSize: '14px',
                   fontWeight: 700,
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  boxShadow: '0 4px 12px rgba(10, 37, 64, 0.2)'
+                  cursor: (loading || !isOnline) ? 'not-allowed' : 'pointer',
+                  boxShadow: !isOnline ? 'none' : '0 4px 12px rgba(10, 37, 64, 0.2)',
+                  opacity: !isOnline ? 0.7 : 1
                 }}
               >
-                {loading ? 'Authenticating Security Credentials...' : 'Authenticate & Generate MFA Code'}
+                {loading ? 'Authenticating Security Credentials...' : !isOnline ? '📵 No Internet — Cannot Send OTP' : 'Authenticate & Generate MFA Code'}
               </button>
 
               <div style={{ marginTop: '20px', padding: '10px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 'var(--radius-md)', fontSize: '11px', color: '#166534', textAlign: 'center' }}>

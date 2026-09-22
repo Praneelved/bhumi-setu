@@ -3,6 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Building2, Eye, EyeOff, Lock, ArrowLeft, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import { agencyAuth, verifyMFA, type MFAResponse } from '../services/authService';
 import OTPVerification from '../components/auth/OTPVerification';
+import OfflineBanner from '../components/ui/OfflineBanner';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
 
 type Step = 'credentials' | 'mfa';
 
@@ -18,6 +20,7 @@ const SECTOR_CATEGORIES = [
 export const AgencyLogin: React.FC = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>('credentials');
+  const { isOnline, wasOffline } = useNetworkStatus();
 
   // Form inputs for Agency ONLY (MUST NOT match Government inputs)
   const [agencyId, setAgencyId] = useState('');
@@ -41,6 +44,11 @@ export const AgencyLogin: React.FC = () => {
   const handleAgencyLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (!isOnline) {
+      setError('No internet connection. OTP cannot be sent without internet. Please reconnect and try again.');
+      return;
+    }
 
     if (!agencyId.trim()) {
       setError('Please enter your Organization / Agency ID.');
@@ -143,6 +151,7 @@ export const AgencyLogin: React.FC = () => {
           </Link>
 
 
+          <OfflineBanner isOnline={isOnline} wasOffline={wasOffline} />
 
           {error && (
             <div style={{
@@ -291,21 +300,22 @@ export const AgencyLogin: React.FC = () => {
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !isOnline}
                 style={{
                   width: '100%',
-                  backgroundColor: '#0a6d3a',
+                  backgroundColor: !isOnline ? '#94a3b8' : '#0a6d3a',
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: 'var(--radius-md)',
                   padding: '12px 16px',
                   fontSize: '14px',
                   fontWeight: 700,
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  boxShadow: '0 4px 12px rgba(10, 109, 58, 0.2)'
+                  cursor: (loading || !isOnline) ? 'not-allowed' : 'pointer',
+                  boxShadow: !isOnline ? 'none' : '0 4px 12px rgba(10, 109, 58, 0.2)',
+                  opacity: !isOnline ? 0.7 : 1
                 }}
               >
-                {loading ? 'Authenticating Agency Access...' : 'Agency Sign In & Proceed'}
+                {loading ? 'Authenticating Agency Access...' : !isOnline ? '📵 No Internet — Cannot Send OTP' : 'Agency Sign In & Proceed'}
               </button>
 
               <div style={{ marginTop: '20px', padding: '10px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 'var(--radius-md)', fontSize: '11px', color: '#166534', textAlign: 'center' }}>
