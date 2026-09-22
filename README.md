@@ -13,11 +13,12 @@
 [![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey?style=flat-square&logo=tauri)](https://github.com/Praneelved/bhumi-setu/releases)
 [![Made with Tauri](https://img.shields.io/badge/Made%20with-Tauri%20v2-24c8db?style=flat-square&logo=tauri)](https://tauri.app)
+[![Wiki Documentation](https://img.shields.io/badge/Wiki-Documentation-blueviolet?style=flat-square&logo=gitbook)](wiki/Home.md)
 [![Smart India Hackathon](https://img.shields.io/badge/Smart%20India%20Hackathon-2024-orange?style=flat-square)](https://www.sih.gov.in)
 
 ---
 
-**[📥 Download Desktop App](#-desktop-downloads) · [🚀 Quickstart](#-quickstart) · [📖 Docs](#-architecture) · [🤝 Contributing](CONTRIBUTING.md)**
+**[📥 Download Desktop App](#-desktop-downloads) · [🚀 Quickstart](#-quickstart) · [📖 Official Wiki](wiki/Home.md) · [🏗️ Architecture](#-architecture) · [🤝 Contributing](CONTRIBUTING.md)**
 
 </div>
 
