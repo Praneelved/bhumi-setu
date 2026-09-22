@@ -1,7 +1,15 @@
 {
-  "name": "frontend",
+  "name": "bhoomisetu",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.1.1",
+  "description": "BhoomiSetu — National Land Acquisition Management System. Offline-first desktop app for transparent land acquisition workflows.",
+  "author": "BhoomiSetu Contributors",
+  "homepage": "https://github.com/Praneelved/bhumi-setu",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Praneelved/bhumi-setu.git"
+  },
+  "keywords": ["land-acquisition", "government", "tauri", "india", "SIH", "gis", "fastapi"],
   "type": "module",
   "scripts": {
     "dev": "vite",

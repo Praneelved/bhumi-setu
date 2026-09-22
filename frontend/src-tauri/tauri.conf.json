@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "bhoomisetu",
-  "version": "0.1.0",
+  "productName": "BhoomiSetu",
+  "version": "1.1.1",
   "identifier": "in.gov.bhoomisetu",
   "build": {
     "frontendDist": "../dist",
@@ -12,9 +12,11 @@
   "app": {
     "windows": [
       {
-        "title": "BhoomiSetu - National Land Acquisition System",
-        "width": 800,
-        "height": 600,
+        "title": "BhoomiSetu — National Land Acquisition System",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 960,
+        "minHeight": 640,
         "resizable": true,
         "fullscreen": false
       }
