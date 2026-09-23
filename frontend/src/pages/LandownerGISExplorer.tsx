@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import * as maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import {
   Map as MapIcon,
   MapPin,
@@ -75,9 +77,12 @@ export const LandownerGISExplorer: React.FC = () => {
   // Read Google Maps API key from environment configuration
   const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
-  // Map DOM & Google Maps Object References
+  // Map DOM & Engine References
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
+  const mapInstanceRef = useRef<any>(null); // Google Maps instance
+  const mapLibreRef = useRef<maplibregl.Map | null>(null); // MapLibre GL instance
+  const [activeEngine, setActiveEngine] = useState<'google' | 'maplibre'>('maplibre');
+
   const polygonsRef = useRef<{ [key: string]: any }>({});
   const markersRef = useRef<{ [key: string]: any }>({});
   const greenBeltPolygonRef = useRef<any>(null);
@@ -134,100 +139,285 @@ export const LandownerGISExplorer: React.FC = () => {
     }
   };
 
-  // Center & Zoom Google Map directly to the small property level (zoom 17.5 / 18)
+  // Center & Zoom map directly to the small property level (zoom 17.5)
   const focusCameraOnParcel = useCallback((detail: LandownerParcelDetail) => {
-    if (!mapInstanceRef.current || !detail) return;
+    if (!detail) return;
     const lat = detail.centroid_lat || 30.8655;
     const lng = detail.centroid_lng || 75.8640;
 
-    mapInstanceRef.current.panTo({ lat, lng });
-    mapInstanceRef.current.setZoom(17.5);
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.panTo({ lat, lng });
+      mapInstanceRef.current.setZoom(17.5);
 
-    // Update styling on Google Maps polygons
-    Object.keys(polygonsRef.current).forEach((pId) => {
-      const poly = polygonsRef.current[pId];
-      if (pId === detail.id) {
-        poly.setOptions({
-          strokeColor: '#d97706',
-          strokeWeight: 4,
-          fillColor: '#f59e0b',
-          fillOpacity: 0.45,
-          zIndex: 10
-        });
-      } else {
-        poly.setOptions({
-          strokeColor: '#461300',
-          strokeWeight: 2.5,
-          fillColor: '#f59e0b',
-          fillOpacity: 0.25,
-          zIndex: 1
-        });
-      }
-    });
+      // Update styling on Google Maps polygons
+      Object.keys(polygonsRef.current).forEach((pId) => {
+        const poly = polygonsRef.current[pId];
+        if (pId === detail.id) {
+          poly.setOptions({
+            strokeColor: '#d97706',
+            strokeWeight: 4,
+            fillColor: '#f59e0b',
+            fillOpacity: 0.45,
+            zIndex: 10
+          });
+        } else {
+          poly.setOptions({
+            strokeColor: '#461300',
+            strokeWeight: 2.5,
+            fillColor: '#f59e0b',
+            fillOpacity: 0.25,
+            zIndex: 1
+          });
+        }
+      });
+    }
+
+    if (mapLibreRef.current) {
+      mapLibreRef.current.flyTo({
+        center: [lng, lat],
+        zoom: 17.5,
+        essential: true
+      });
+    }
   }, []);
 
   useEffect(() => {
     loadData();
   }, []);
 
-  // Initialize Real Google Map
+  // Initialize Map Engine (Google Maps if API key is provided, otherwise MapLibre GL fallback)
   useEffect(() => {
     if (!mapContainerRef.current) return;
-
-    if (!googleMapsApiKey) {
-      setMapError('Google Maps could not be loaded. Please check the Google Maps API configuration (VITE_GOOGLE_MAPS_API_KEY).');
-      console.error('[BhoomiSetu] Missing VITE_GOOGLE_MAPS_API_KEY environment variable in frontend/.env');
-      return;
-    }
-
     let isCancelled = false;
 
-    loadGoogleMapsScript(googleMapsApiKey)
-      .then((google) => {
-        if (isCancelled || !mapContainerRef.current) return;
+    // Helper to init MapLibre GL
+    const initMapLibre = () => {
+      if (isCancelled || !mapContainerRef.current) return;
+      if (mapLibreRef.current) return;
 
-        // Initialize Google Map
-        const map = new google.maps.Map(mapContainerRef.current, {
-          center: { lat: 30.865500, lng: 75.864000 },
-          zoom: 17.5,
-          mapTypeId: isSatellite ? google.maps.MapTypeId.HYBRID : google.maps.MapTypeId.ROADMAP,
-          mapTypeControl: false, // Handled via our custom responsive toggle
-          streetViewControl: false,
-          fullscreenControl: false,
-          zoomControl: true,
-          gestureHandling: 'cooperative'
+      try {
+        const mlMap = new maplibregl.Map({
+          container: mapContainerRef.current,
+          style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+          center: [75.864000, 30.865500],
+          zoom: 17.2
         });
 
-        mapInstanceRef.current = map;
+        mlMap.addControl(new maplibregl.NavigationControl(), 'top-right');
+
+        mlMap.on('load', () => {
+          if (isCancelled || !mlMap) return;
+
+          // 1. Esri Satellite Imagery Layer (Raster)
+          mlMap.addSource('esri-satellite-tiles', {
+            type: 'raster',
+            tiles: [
+              'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+            ],
+            tileSize: 256,
+            attribution: 'Esri, Maxar'
+          });
+
+          mlMap.addLayer({
+            id: 'satellite-imagery-layer',
+            type: 'raster',
+            source: 'esri-satellite-tiles',
+            layout: {
+              visibility: isSatellite ? 'visible' : 'none'
+            },
+            paint: {
+              'raster-opacity': 1.0
+            }
+          });
+
+          // 2. Green Belt Buffer Polygon Layer
+          mlMap.addSource('greenbelt-zone', {
+            type: 'geojson',
+            data: {
+              type: 'Feature',
+              properties: { name: 'Green Belt Buffer (Informational)' },
+              geometry: {
+                type: 'Polygon',
+                coordinates: [[
+                  [75.863100, 30.864600],
+                  [75.864900, 30.864600],
+                  [75.864900, 30.865100],
+                  [75.863100, 30.865100],
+                  [75.863100, 30.864600]
+                ]]
+              }
+            }
+          });
+
+          mlMap.addLayer({
+            id: 'greenbelt-fill',
+            type: 'fill',
+            source: 'greenbelt-zone',
+            paint: {
+              'fill-color': '#10b981',
+              'fill-opacity': 0.22
+            },
+            layout: {
+              visibility: showGreenBelt ? 'visible' : 'none'
+            }
+          });
+
+          mlMap.addLayer({
+            id: 'greenbelt-line',
+            type: 'line',
+            source: 'greenbelt-zone',
+            paint: {
+              'line-color': '#059669',
+              'line-width': 1.5,
+              'line-dasharray': [2, 2]
+            },
+            layout: {
+              visibility: showGreenBelt ? 'visible' : 'none'
+            }
+          });
+
+          // 3. Cadastral Landowner Parcels
+          mlMap.addSource('landowner-parcels', {
+            type: 'geojson',
+            data: parcelsData || { type: 'FeatureCollection', features: [] }
+          });
+
+          mlMap.addLayer({
+            id: 'landowner-parcels-fill',
+            type: 'fill',
+            source: 'landowner-parcels',
+            paint: {
+              'fill-color': '#f59e0b',
+              'fill-opacity': [
+                'case',
+                ['==', ['get', 'id'], selectedParcelId],
+                0.48,
+                0.26
+              ]
+            }
+          });
+
+          mlMap.addLayer({
+            id: 'landowner-parcels-line',
+            type: 'line',
+            source: 'landowner-parcels',
+            paint: {
+              'line-color': [
+                'case',
+                ['==', ['get', 'id'], selectedParcelId],
+                '#d97706',
+                '#461300'
+              ],
+              'line-width': [
+                'case',
+                ['==', ['get', 'id'], selectedParcelId],
+                4,
+                2.5
+              ]
+            }
+          });
+
+          mlMap.addLayer({
+            id: 'landowner-parcels-labels',
+            type: 'symbol',
+            source: 'landowner-parcels',
+            layout: {
+              'text-field': ['concat', ['get', 'id'], '\n', ['to-string', ['get', 'area_ha']], ' ha'],
+              'text-size': 11,
+              'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+              'text-anchor': 'center'
+            },
+            paint: {
+              'text-color': '#461300',
+              'text-halo-color': '#ffffff',
+              'text-halo-width': 2
+            }
+          });
+
+          // Hover cursor effects
+          mlMap.on('mouseenter', 'landowner-parcels-fill', () => {
+            mlMap.getCanvas().style.cursor = 'pointer';
+          });
+          mlMap.on('mouseleave', 'landowner-parcels-fill', () => {
+            mlMap.getCanvas().style.cursor = '';
+          });
+
+          // Parcel click handler
+          mlMap.on('click', 'landowner-parcels-fill', (e) => {
+            if (e.features && e.features.length > 0) {
+              const featId = e.features[0].id as string;
+              if (featId) {
+                setSelectedParcelId(featId);
+                loadParcelDetail(featId);
+              }
+            }
+          });
+
+          // Fit bounds or center initial parcel
+          if (selectedDetail) {
+            focusCameraOnParcel(selectedDetail);
+          }
+        });
+
+        mapLibreRef.current = mlMap;
+        setActiveEngine('maplibre');
         setMapError(null);
+      } catch (err: any) {
+        console.error('[BhoomiSetu] Failed to initialize MapLibre GL:', err);
+        setMapError('Failed to initialize map rendering engine.');
+      }
+    };
 
-        // Render Green Belt / Eco-Sensitive Buffer Overlay (Informational)
-        const greenBeltCoords = [
-          { lat: 30.864600, lng: 75.863100 },
-          { lat: 30.864600, lng: 75.864900 },
-          { lat: 30.865100, lng: 75.864900 },
-          { lat: 30.865100, lng: 75.863100 }
-        ];
+    if (googleMapsApiKey) {
+      loadGoogleMapsScript(googleMapsApiKey)
+        .then((google) => {
+          if (isCancelled || !mapContainerRef.current) return;
 
-        const greenBeltPoly = new google.maps.Polygon({
-          paths: greenBeltCoords,
-          strokeColor: '#059669',
-          strokeOpacity: 0.8,
-          strokeWeight: 1.5,
-          fillColor: '#10b981',
-          fillOpacity: 0.22,
-          map: showGreenBelt ? map : null,
-          zIndex: 0
+          // Initialize Google Map
+          const map = new google.maps.Map(mapContainerRef.current, {
+            center: { lat: 30.865500, lng: 75.864000 },
+            zoom: 17.5,
+            mapTypeId: isSatellite ? google.maps.MapTypeId.HYBRID : google.maps.MapTypeId.ROADMAP,
+            mapTypeControl: false,
+            streetViewControl: false,
+            fullscreenControl: false,
+            zoomControl: true,
+            gestureHandling: 'cooperative'
+          });
+
+          mapInstanceRef.current = map;
+          setActiveEngine('google');
+          setMapError(null);
+
+          // Render Green Belt Buffer Overlay
+          const greenBeltCoords = [
+            { lat: 30.864600, lng: 75.863100 },
+            { lat: 30.864600, lng: 75.864900 },
+            { lat: 30.865100, lng: 75.864900 },
+            { lat: 30.865100, lng: 75.863100 }
+          ];
+
+          const greenBeltPoly = new google.maps.Polygon({
+            paths: greenBeltCoords,
+            strokeColor: '#059669',
+            strokeOpacity: 0.8,
+            strokeWeight: 1.5,
+            fillColor: '#10b981',
+            fillOpacity: 0.22,
+            map: showGreenBelt ? map : null,
+            zIndex: 0
+          });
+
+          greenBeltPolygonRef.current = greenBeltPoly;
+        })
+        .catch((err) => {
+          console.warn('[BhoomiSetu] Google Maps load failed, falling back to MapLibre GL:', err);
+          initMapLibre();
         });
-
-        greenBeltPolygonRef.current = greenBeltPoly;
-      })
-      .catch((err) => {
-        if (!isCancelled) {
-          setMapError('Google Maps could not be loaded. Please check the Google Maps API configuration.');
-          console.error('[BhoomiSetu] Error loading Google Maps:', err);
-        }
-      });
+    } else {
+      // No Google Maps API key provided -> use MapLibre GL open engine
+      initMapLibre();
+    }
 
     return () => {
       isCancelled = true;
@@ -237,12 +427,17 @@ export const LandownerGISExplorer: React.FC = () => {
       polygonsRef.current = {};
       markersRef.current = {};
       mapInstanceRef.current = null;
+
+      if (mapLibreRef.current) {
+        mapLibreRef.current.remove();
+        mapLibreRef.current = null;
+      }
     };
   }, [googleMapsApiKey]);
 
   // Render or Update Landowner Parcel Polygons on Google Map
   useEffect(() => {
-    if (!mapInstanceRef.current || !parcelsData?.features || !(window as any).google?.maps) return;
+    if (activeEngine !== 'google' || !mapInstanceRef.current || !parcelsData?.features || !(window as any).google?.maps) return;
     const google = (window as any).google;
 
     // Clean up existing polygons/markers
@@ -317,23 +512,87 @@ export const LandownerGISExplorer: React.FC = () => {
     } else if (!bounds.isEmpty()) {
       mapInstanceRef.current.fitBounds(bounds, { top: 60, right: 60, bottom: 60, left: 60 });
     }
-  }, [parcelsData]);
+  }, [parcelsData, activeEngine]);
 
-  // Handle Satellite / Road Map Toggle on Google Maps
+  // Update MapLibre GL Parcels Data
   useEffect(() => {
-    if (!mapInstanceRef.current || !(window as any).google?.maps) return;
-    const google = (window as any).google;
-    mapInstanceRef.current.setMapTypeId(
-      isSatellite ? google.maps.MapTypeId.HYBRID : google.maps.MapTypeId.ROADMAP
-    );
-  }, [isSatellite]);
+    if (activeEngine === 'maplibre' && mapLibreRef.current && parcelsData) {
+      const source = mapLibreRef.current.getSource('landowner-parcels') as maplibregl.GeoJSONSource;
+      if (source) {
+        source.setData(parcelsData as any);
+      }
+    }
+  }, [parcelsData, activeEngine]);
 
-  // Handle Green Belt Layer Toggle on Google Maps
+  // Update MapLibre GL Selected Parcel Styling
   useEffect(() => {
-    if (greenBeltPolygonRef.current && mapInstanceRef.current) {
+    if (activeEngine === 'maplibre' && mapLibreRef.current) {
+      if (mapLibreRef.current.getLayer('landowner-parcels-fill')) {
+        mapLibreRef.current.setPaintProperty('landowner-parcels-fill', 'fill-opacity', [
+          'case',
+          ['==', ['get', 'id'], selectedParcelId],
+          0.48,
+          0.26
+        ]);
+      }
+      if (mapLibreRef.current.getLayer('landowner-parcels-line')) {
+        mapLibreRef.current.setPaintProperty('landowner-parcels-line', 'line-color', [
+          'case',
+          ['==', ['get', 'id'], selectedParcelId],
+          '#d97706',
+          '#461300'
+        ]);
+        mapLibreRef.current.setPaintProperty('landowner-parcels-line', 'line-width', [
+          'case',
+          ['==', ['get', 'id'], selectedParcelId],
+          4,
+          2.5
+        ]);
+      }
+    }
+  }, [selectedParcelId, activeEngine]);
+
+  // Handle Satellite / Road Map Toggle
+  useEffect(() => {
+    if (activeEngine === 'google' && mapInstanceRef.current && (window as any).google?.maps) {
+      const google = (window as any).google;
+      mapInstanceRef.current.setMapTypeId(
+        isSatellite ? google.maps.MapTypeId.HYBRID : google.maps.MapTypeId.ROADMAP
+      );
+    }
+    if (activeEngine === 'maplibre' && mapLibreRef.current) {
+      if (mapLibreRef.current.getLayer('satellite-imagery-layer')) {
+        mapLibreRef.current.setLayoutProperty(
+          'satellite-imagery-layer',
+          'visibility',
+          isSatellite ? 'visible' : 'none'
+        );
+      }
+    }
+  }, [isSatellite, activeEngine]);
+
+  // Handle Green Belt Layer Toggle
+  useEffect(() => {
+    if (activeEngine === 'google' && greenBeltPolygonRef.current && mapInstanceRef.current) {
       greenBeltPolygonRef.current.setMap(showGreenBelt ? mapInstanceRef.current : null);
     }
-  }, [showGreenBelt]);
+    if (activeEngine === 'maplibre' && mapLibreRef.current) {
+      if (mapLibreRef.current.getLayer('greenbelt-fill')) {
+        mapLibreRef.current.setLayoutProperty(
+          'greenbelt-fill',
+          'visibility',
+          showGreenBelt ? 'visible' : 'none'
+        );
+      }
+      if (mapLibreRef.current.getLayer('greenbelt-line')) {
+        mapLibreRef.current.setLayoutProperty(
+          'greenbelt-line',
+          'visibility',
+          showGreenBelt ? 'visible' : 'none'
+        );
+      }
+    }
+  }, [showGreenBelt, activeEngine]);
 
   // Search Handler (Landowner-Specific)
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -659,7 +918,7 @@ export const LandownerGISExplorer: React.FC = () => {
 
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', cursor: 'pointer' }}>
                 <input type="checkbox" checked={true} readOnly />
-                <span>✓ My Land Parcels (Google Maps)</span>
+                <span>✓ My Land Parcels ({activeEngine === 'google' ? 'Google Maps' : 'MapLibre Open GIS'})</span>
               </label>
 
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', cursor: 'pointer' }}>
@@ -677,7 +936,7 @@ export const LandownerGISExplorer: React.FC = () => {
         </div>
       </div>
 
-      {/* ── 4. Main Interactive Google Map + Parcel Details Panel ── */}
+      {/* ── 4. Main Interactive Map + Parcel Details Panel ── */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: selectedDetail ? '1fr 390px' : '1fr',
@@ -685,7 +944,7 @@ export const LandownerGISExplorer: React.FC = () => {
         minHeight: '580px',
         marginBottom: '20px'
       }}>
-        {/* Real Interactive Google Map Container */}
+        {/* Real Interactive Map Container */}
         <div style={{
           position: 'relative',
           borderRadius: '14px',
@@ -695,7 +954,7 @@ export const LandownerGISExplorer: React.FC = () => {
           minHeight: '560px',
           backgroundColor: '#f8fafc'
         }}>
-          {/* Error Banner if Google Maps fails to load */}
+          {/* Error Banner if both map engines fail to load */}
           {mapError ? (
             <div style={{
               display: 'flex',
@@ -714,7 +973,7 @@ export const LandownerGISExplorer: React.FC = () => {
                 {mapError}
               </div>
               <div style={{ fontSize: '13px', color: '#7c2d12', maxWidth: '480px', lineHeight: 1.5 }}>
-                Please ensure a valid Google Maps JavaScript API key is configured in <code>frontend/.env</code> as <code>VITE_GOOGLE_MAPS_API_KEY</code>.
+                Please ensure a valid Google Maps JavaScript API key is configured in <code>frontend/.env</code> as <code>VITE_GOOGLE_MAPS_API_KEY</code>, or check your network connection for MapLibre tiles.
               </div>
             </div>
           ) : (
@@ -741,7 +1000,9 @@ export const LandownerGISExplorer: React.FC = () => {
             boxShadow: '0 1px 4px rgba(0,0,0,0.08)'
           }}>
             <CheckCircle2 size={13} color="#15803d" />
-            Exact Property Cadastral Boundary (Google Maps Aerial View)
+            {activeEngine === 'google'
+              ? 'Exact Property Cadastral Boundary (Google Maps Aerial View)'
+              : 'Exact Property Cadastral Boundary (MapLibre Open GIS View)'}
           </div>
 
           {/* Map Legend Overlay */}

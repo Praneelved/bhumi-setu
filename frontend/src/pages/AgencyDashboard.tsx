@@ -179,6 +179,25 @@ export const AgencyDashboard: React.FC = () => {
           >
             <PlusCircle size={16} /> Submit New Land Proposal
           </button>
+          <button
+            onClick={() => navigate('/agency/gis')}
+            style={{
+              backgroundColor: '#0a2540',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: 'var(--radius-md)',
+              padding: '10px 16px',
+              fontSize: '13px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 4px 12px rgba(10, 37, 64, 0.2)'
+            }}
+          >
+            <MapPin size={16} /> Project GIS Explorer
+          </button>
         </div>
       </div>
 
@@ -261,6 +280,55 @@ export const AgencyDashboard: React.FC = () => {
       {/* TAB 1: OVERVIEW */}
       {activeTab === 'OVERVIEW' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 'var(--space-lg)' }}>
+          {/* Agency GIS Callout */}
+          <div style={{
+            gridColumn: '1 / -1',
+            background: 'linear-gradient(135deg, #0a2540 0%, #0d3b66 60%, #059669 100%)',
+            color: '#ffffff',
+            borderRadius: 'var(--radius-lg)',
+            padding: '22px 26px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            boxShadow: '0 8px 24px rgba(10, 37, 64, 0.2)',
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            <div style={{ maxWidth: '660px', zIndex: 2 }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: 'rgba(255,255,255,0.15)', padding: '4px 10px', borderRadius: '100px', fontSize: '11px', fontWeight: 700, marginBottom: '8px', backdropFilter: 'blur(4px)' }}>
+                <Layers size={13} color="#6ee7b7" /> Interactive Project Geospatial Intelligence
+              </div>
+              <h2 style={{ fontSize: '19px', fontWeight: 800, margin: '0 0 6px 0', letterSpacing: '-0.02em', color: '#ffffff' }}>
+                Agency GIS Map & Cadastral Corridor Explorer
+              </h2>
+              <p style={{ margin: 0, fontSize: '13px', color: '#cbd5e1', lineHeight: 1.5 }}>
+                Inspect project boundaries, impacted survey numbers, landowner holdings, and real-time acquisition status on the interactive geospatial GIS.
+              </p>
+            </div>
+            <div style={{ zIndex: 2, display: 'flex', gap: '10px' }}>
+              <button
+                onClick={() => navigate('/agency/gis')}
+                style={{
+                  padding: '11px 20px',
+                  backgroundColor: '#059669',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 4px 14px rgba(5, 150, 105, 0.4)',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                <MapPin size={16} /> Open Project GIS Map <ArrowUpRight size={16} />
+              </button>
+            </div>
+          </div>
+
           <div style={{ backgroundColor: '#ffffff', border: '1px solid var(--outline-variant)', borderRadius: 'var(--radius-lg)', padding: '20px' }}>
             <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--primary)', margin: '0 0 16px 0' }}>
               Active Proposals Tracking
@@ -328,6 +396,7 @@ export const AgencyDashboard: React.FC = () => {
                 <th style={{ padding: '12px 16px', fontWeight: 700 }}>Submitted Date</th>
                 <th style={{ padding: '12px 16px', fontWeight: 700 }}>Government Stage</th>
                 <th style={{ padding: '12px 16px', fontWeight: 700 }}>Status</th>
+                <th style={{ padding: '12px 16px', fontWeight: 700 }}>Geospatial GIS</th>
               </tr>
             </thead>
             <tbody>
@@ -343,6 +412,26 @@ export const AgencyDashboard: React.FC = () => {
                     <span style={{ backgroundColor: '#f0fdf4', color: '#166534', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 700 }}>
                       {c.overallStatus}
                     </span>
+                  </td>
+                  <td style={{ padding: '14px 16px' }}>
+                    <button
+                      onClick={() => navigate('/agency/gis')}
+                      style={{
+                        padding: '6px 12px',
+                        backgroundColor: '#0a2540',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px'
+                      }}
+                    >
+                      <MapPin size={12} color="#38bdf8" /> Open GIS Map
+                    </button>
                   </td>
                 </tr>
               ))}

@@ -26,6 +26,7 @@ import About from './pages/About';
 
 // AGENCY & PERSONAL DASHBOARDS
 import { AgencyDashboard } from './pages/AgencyDashboard';
+import { AgencyGISExplorer } from './pages/AgencyGISExplorer';
 import { PersonalDashboard } from './pages/PersonalDashboard';
 
 // GOVERNMENT VERIFICATION PORTAL PAGES (3 DISTINCT STAGES)
@@ -175,6 +176,7 @@ function App() {
         >
           <Route element={<AuthenticatedLayout />}>
             <Route path="/agency/dashboard" element={<AgencyDashboard />} />
+            <Route path="/agency/gis" element={<AgencyGISExplorer />} />
           </Route>
         </Route>
 

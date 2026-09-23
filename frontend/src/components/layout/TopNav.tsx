@@ -11,7 +11,7 @@ const publicNavItems = [
 // Government portal navigation (preserved for authenticated officers)
 const governmentNavItems = [
   { path: '/government/dashboard', label: 'Government Verified Portal' },
-  { path: '/gis', label: 'National GIS Explorer' },
+  { path: '/government/gis', label: 'Government GIS Monitoring' },
   { path: '/government/compensation', label: 'Compensation Executive Proposal' },
   { path: '/about', label: 'About' },
 ];
@@ -19,7 +19,7 @@ const governmentNavItems = [
 // Agency portal navigation (preserved for authenticated agency users)
 const agencyNavItems = [
   { path: '/agency/dashboard', label: 'Agency Portal' },
-  { path: '/gis', label: 'National GIS Explorer' },
+  { path: '/agency/gis', label: 'Project GIS Explorer' },
   { path: '/about', label: 'About' },
 ];
 

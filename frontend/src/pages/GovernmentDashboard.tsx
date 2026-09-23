@@ -261,6 +261,27 @@ export const GovernmentDashboard: React.FC<GovernmentDashboardProps> = ({ tier }
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <button
             type="button"
+            onClick={() => navigate('/government/gis')}
+            style={{
+              backgroundColor: '#0a2540',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: 'var(--radius-md)',
+              padding: '8px 16px',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 2px 8px rgba(10,37,64,0.2)'
+            }}
+          >
+            <MapPin size={14} color="#38bdf8" /> GIS Monitoring Map
+          </button>
+
+          <button
+            type="button"
             onClick={handleResetData}
             title="Reset mock cases data"
             style={{

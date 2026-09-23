@@ -7,6 +7,32 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [v1.3.0] — 2026-09-23
+
+### Added
+- **Government GIS Monitoring Dashboard** (`/government/gis`): A dedicated, state/district-level GIS monitoring and decision-support command center for government officers and Competent Authorities (CALA).
+  - **Executive 10-KPI Metric Strip**: Real-time aggregated statistics for Total Projects, Active, Completed, Delayed, Land Parcels, Affected Landowners, Land Required, Land Acquired, Compensation Pending, and Disputed Parcels.
+  - **Interactive Cadastral GIS Map**: Vector street and high-resolution Esri satellite cartography with project corridor polygons and parcel-level cadastral boundaries with red encumbrance strokes for disputed land.
+  - **Administrative Drill-Down**: Multi-tier administrative filtering from State → District → Taluka → Village → Project → Land Parcel → Landowner with auto-camera framing.
+  - **Issues & Bottlenecks Registry**: Dedicated tracking tab for Documents Pending, Verification Pending, Compensation Pending, Collector Approval Pending, Disputed Land, and Delayed Acquisition with single-click flyTo.
+  - **Priority Areas Requiring Attention**: Factual priority hotspots ranked by pending acreage, litigation injunctions, and delayed milestones.
+  - **Multi-Project Comparison Tool**: Side-by-side benchmarking matrix for up to 4 infrastructure projects comparing required land, acquired land, pending claims, landowners, and court disputes.
+  - **Statutory Dossier Audit Modal**: Comprehensive parcel-level statutory checklist, 7/12 extract verification, and RFCTLARR 2013 solatium calculator.
+  - **Tri-Role GIS Routing**: Clean role-based dispatcher in `GISExplorer.tsx` providing distinct, dedicated GIS experiences for Landowners (`/gis`), Agencies (`/agency/gis`), and Government Officers (`/government/gis`).
+
+---
+
+## [v1.2.0] — 2026-09-23
+
+### Added
+- **Dedicated Agency GIS Map** (`/agency/gis`): Project-centric corridor explorer for agencies handling land acquisition projects.
+  - Corridor boundary outlines with buffer zones for 6 national infrastructure projects.
+  - Cadastral parcel polygons color-coded by acquisition status with centroid labels.
+  - Landowner information sidebar and statutory holding dossier.
+  - Project summary cards, multi-parameter search, and layer controls.
+
+---
+
 ## [v1.1.1] — 2026-09-23
 
 ### Added
