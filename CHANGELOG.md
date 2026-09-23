@@ -7,6 +7,30 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [v1.4.0] — 2026-09-23
+
+### Added
+- **New Project Proposal Module (Agency Login)**:
+  - **Prominent "+ Submit New Project Proposal" Entry Button**: Added directly in the Agency Dashboard header and tab navigation.
+  - **6-Step Professional Government Proposal Wizard (`NewProjectProposalWizard.tsx`)**:
+    - **Step 1 – Project Information**: Auto-generated Proposal ID (`PRP-2026-00125`), Project Type (Highway, Airport, Metro, Railway, Industrial, etc.), Category, Priority, Duration, and Planned Start/Completion dates.
+    - **Step 2 – Location & GIS Boundary**: State, District, Taluka, Village, and PIN code; interactive MapLibre GL GIS selection (Corridor, Polygon, Point) with auto-calculation of approximate project area (Acres/Ha), affected parcels count, and affected landowners.
+    - **Step 3 – Project Details & Financials**: Large justification text areas (Objectives, Public Purpose, Urgency, Non-implementation consequences), multi-select expected benefits, and comprehensive cost breakdown (Land, Construction, Other, Total) with funding structure (Govt, Private, PPP).
+    - **Step 4 – Land Requirement & Affected Parcels**: Breakdown of Government, Private, Forest, and Other land; real-time cadastral table populated from GIS database with Survey Numbers, Landowners, Villages, and Affected Area.
+    - **Step 5 – Documents & Implementation Plan**: File upload system for DPR, Feasibility, SIA, Environmental clearances, and Site Layout maps with size validation; 6-phase milestone timeline (Planning, Land Identification, Acquisition, Approvals, Construction, Completion).
+    - **Step 6 – Review, Agency Details, Declaration & Authorization**: Auto-populated authenticated agency profile (Agency Name, ID, Authorized Representative, Contact, Email, Address); mandatory statutory declaration checkbox; Authorized Representative digital confirmation; Save as Draft and Submit actions.
+  - **My Project Proposals Tracking Registry**:
+    - Interactive proposals registry in Agency Dashboard with lifecycle status badges (`Draft`, `Submitted – Pending Government Review`, `Under Government Review`, `Clarification Required`, `Approved`, `Rejected`).
+    - Proposal Dossier Modal (`ProposalDetailModal.tsx`) with 6-stage lifecycle timeline.
+    - **Two-Way Clarification Workflow**: Displays government clarification requests with officer remarks and actionable directives; provides an in-modal response and document resubmission interface.
+- **Government Review Connection (`GovernmentDashboard.tsx` & `GovernmentProposalReviewModal.tsx`)**:
+  - Dedicated "New Project Proposals" statutory review tab in the Government Dashboard with real-time pending badge.
+  - Full-featured Government Review Modal allowing officers to inspect project charters, GIS corridors, cadastral parcels, and DPR documents.
+  - **Clarification Request Action**: Officers can issue formal clarification notices specifying required actions and remarks.
+  - **Statutory Approval & GIS Auto-Provisioning**: Approving a proposal generates a permanent Project ID and automatically provisions the project into both **Agency GIS** (`AGENCY_PROJECTS`) and **Government GIS** (`GOV_PROJECTS`), seamlessly connecting proposals to active acquisition monitoring.
+
+---
+
 ## [v1.3.0] — 2026-09-23
 
 ### Added

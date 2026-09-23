@@ -7,11 +7,18 @@ import {
 import { getStoredCases, saveCases, createDefaultReviewData } from '../mock/governmentMockData';
 import type { VerificationCase } from '../types/governmentVerification';
 import { getStoredUser } from '../services/api';
+import { getStoredProposals, type ProjectProposal } from '../data/projectProposalData';
+import { NewProjectProposalWizard } from '../components/agency/NewProjectProposalWizard';
+import { ProposalDetailModal } from '../components/agency/ProposalDetailModal';
 
 export const AgencyDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'PROJECTS' | 'NEW_PROPOSAL' | 'PARCELS' | 'NOTIFICATIONS'>('OVERVIEW');
   const [cases, setCases] = useState<VerificationCase[]>([]);
+  const [proposals, setProposals] = useState<ProjectProposal[]>([]);
+  const [wizardOpen, setWizardOpen] = useState<boolean>(false);
+  const [selectedProposal, setSelectedProposal] = useState<ProjectProposal | null>(null);
+  const [detailModalOpen, setDetailModalOpen] = useState<boolean>(false);
   const currentUser = getStoredUser() || {
     id: 'AGENCY-NHAI-001',
     name: 'Rajiv Malhotra (Project Director)',
@@ -41,6 +48,7 @@ export const AgencyDashboard: React.FC = () => {
 
   useEffect(() => {
     setCases(getStoredCases());
+    setProposals(getStoredProposals());
   }, []);
 
   const handleCreateProposal = (e: React.FormEvent) => {
@@ -161,23 +169,23 @@ export const AgencyDashboard: React.FC = () => {
           </div>
 
           <button
-            onClick={() => setActiveTab('NEW_PROPOSAL')}
+            onClick={() => setWizardOpen(true)}
             style={{
-              backgroundColor: '#0a6d3a',
+              backgroundColor: '#059669',
               color: '#ffffff',
               border: 'none',
               borderRadius: 'var(--radius-md)',
-              padding: '10px 16px',
+              padding: '10px 18px',
               fontSize: '13px',
               fontWeight: 700,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              boxShadow: '0 4px 12px rgba(10, 109, 58, 0.2)'
+              boxShadow: '0 4px 12px rgba(5, 150, 105, 0.3)'
             }}
           >
-            <PlusCircle size={16} /> Submit New Land Proposal
+            <PlusCircle size={16} /> + Submit New Project Proposal
           </button>
           <button
             onClick={() => navigate('/agency/gis')}
@@ -440,192 +448,214 @@ export const AgencyDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 3: NEW PROPOSAL FORM */}
+      {/* TAB 3: PROJECT PROPOSALS & SUBMISSION */}
       {activeTab === 'NEW_PROPOSAL' && (
-        <div style={{ backgroundColor: '#ffffff', border: '1px solid var(--outline-variant)', borderRadius: 'var(--radius-lg)', padding: '28px', maxWidth: '700px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--primary)', margin: '0 0 16px 0' }}>
-            Submit New Land Acquisition Proposal
-          </h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
+          {/* Header Callout Banner */}
+          <div style={{
+            background: 'linear-gradient(135deg, #0a2540 0%, #0d3b66 60%, #059669 100%)',
+            color: '#ffffff',
+            borderRadius: 'var(--radius-lg)',
+            padding: '24px 28px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            boxShadow: '0 8px 24px rgba(10, 37, 64, 0.2)'
+          }}>
+            <div style={{ maxWidth: '680px' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: 'rgba(255,255,255,0.15)', padding: '4px 10px', borderRadius: '100px', fontSize: '11px', fontWeight: 700, marginBottom: '8px', backdropFilter: 'blur(4px)' }}>
+                <FileText size={13} color="#6ee7b7" /> Official Statutory Proposal Gateway (Form-A)
+              </div>
+              <h2 style={{ fontSize: '20px', fontWeight: 800, margin: '0 0 6px 0', letterSpacing: '-0.02em', color: '#ffffff' }}>
+                New Infrastructure Project Proposal Module
+              </h2>
+              <p style={{ margin: 0, fontSize: '13px', color: '#cbd5e1', lineHeight: 1.5 }}>
+                Submit comprehensive multi-stage project proposals to the Government with DGPS GIS alignment, capital expenditure schedules, affected cadastral survey numbers, and statutory justification.
+              </p>
+            </div>
+            <div>
+              <button
+                onClick={() => setWizardOpen(true)}
+                style={{
+                  padding: '12px 22px',
+                  backgroundColor: '#059669',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: '13px',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 4px 14px rgba(5, 150, 105, 0.4)',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                <PlusCircle size={16} /> + Submit New Project Proposal
+              </button>
+            </div>
+          </div>
 
-          <form onSubmit={handleCreateProposal}>
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--primary)', marginBottom: '6px' }}>
-                Project Title / Infrastructure Corridor Name *
-              </label>
-              <input
-                type="text"
-                value={newProjectName}
-                onChange={(e) => setNewProjectName(e.target.value)}
-                placeholder="e.g. Pune–Nashik High-Speed Rail Corridor"
-                required
-                style={{ width: '100%', padding: '10px 12px', borderRadius: '4px', border: '1px solid var(--outline-variant)', fontSize: '13px' }}
-              />
+          {/* Proposals Metrics Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--space-md)' }}>
+            <div style={{ backgroundColor: '#ffffff', border: '1px solid var(--outline-variant)', borderRadius: 'var(--radius-lg)', padding: '16px' }}>
+              <div style={{ fontSize: '12px', color: 'var(--outline)', fontWeight: 700, textTransform: 'uppercase' }}>Total Proposals</div>
+              <div style={{ fontSize: '26px', fontWeight: 800, color: '#0a2540', marginTop: '4px' }}>{proposals.length}</div>
+              <div style={{ fontSize: '11px', color: 'var(--on-surface-variant)', marginTop: '2px' }}>Agency Submissions</div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--primary)', marginBottom: '6px' }}>
-                  State
-                </label>
-                <input
-                  type="text"
-                  value={newState}
-                  onChange={(e) => setNewState(e.target.value)}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '4px', border: '1px solid var(--outline-variant)', fontSize: '13px' }}
-                />
+            <div style={{ backgroundColor: '#ffffff', border: '1px solid var(--outline-variant)', borderRadius: 'var(--radius-lg)', padding: '16px' }}>
+              <div style={{ fontSize: '12px', color: '#0284c7', fontWeight: 700, textTransform: 'uppercase' }}>Under Review</div>
+              <div style={{ fontSize: '26px', fontWeight: 800, color: '#0284c7', marginTop: '4px' }}>
+                {proposals.filter(p => p.status.includes('Review') || p.status.includes('Submitted')).length}
               </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--primary)', marginBottom: '6px' }}>
-                  Target District
-                </label>
-                <input
-                  type="text"
-                  value={newDistrict}
-                  onChange={(e) => setNewDistrict(e.target.value)}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '4px', border: '1px solid var(--outline-variant)', fontSize: '13px' }}
-                />
-              </div>
+              <div style={{ fontSize: '11px', color: 'var(--on-surface-variant)', marginTop: '2px' }}>Collector & State Review</div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--primary)', marginBottom: '6px' }}>
-                  Estimated Land Parcels
-                </label>
-                <input
-                  type="number"
-                  value={newTotalParcels}
-                  onChange={(e) => setNewTotalParcels(Number(e.target.value))}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '4px', border: '1px solid var(--outline-variant)', fontSize: '13px' }}
-                />
+            <div style={{ backgroundColor: '#ffffff', border: '1px solid #fecaca', borderRadius: 'var(--radius-lg)', padding: '16px' }}>
+              <div style={{ fontSize: '12px', color: '#dc2626', fontWeight: 700, textTransform: 'uppercase' }}>Clarification Req.</div>
+              <div style={{ fontSize: '26px', fontWeight: 800, color: '#dc2626', marginTop: '4px' }}>
+                {proposals.filter(p => p.status === 'Clarification Required').length}
               </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--primary)', marginBottom: '6px' }}>
-                  Estimated Affected Families
-                </label>
-                <input
-                  type="number"
-                  value={newAffectedFamilies}
-                  onChange={(e) => setNewAffectedFamilies(Number(e.target.value))}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '4px', border: '1px solid var(--outline-variant)', fontSize: '13px' }}
-                />
-              </div>
+              <div style={{ fontSize: '11px', color: '#991b1b', marginTop: '2px' }}>Requires Agency Reply</div>
             </div>
 
-            {/* GIS Land-Use & Restricted-Zone Pre-Submission Scan */}
-            <div style={{
-              backgroundColor: '#f8fafc',
-              border: '1px solid #cbd5e1',
-              borderRadius: 'var(--radius-md)',
-              padding: '16px',
-              marginBottom: '24px'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Layers size={18} color="#0a2540" />
-                  <span style={{ fontSize: '13px', fontWeight: 700, color: '#0a2540' }}>
-                    Automated GIS Land-Use &amp; Restricted-Zone Pre-Check
-                  </span>
-                </div>
-                {!gisScanRun && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setGisScanLoading(true);
-                      setTimeout(() => {
-                        setGisScanLoading(false);
-                        setGisScanRun(true);
-                      }, 500);
-                    }}
-                    style={{
-                      padding: '6px 14px',
-                      backgroundColor: '#0a2540',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      fontWeight: 600,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {gisScanLoading ? 'Scanning GIS Layers…' : 'Run GIS Overlay Scan'}
-                  </button>
-                )}
+            <div style={{ backgroundColor: '#ffffff', border: '1px solid #bbf7d0', borderRadius: 'var(--radius-lg)', padding: '16px' }}>
+              <div style={{ fontSize: '12px', color: '#166534', fontWeight: 700, textTransform: 'uppercase' }}>Approved & in GIS</div>
+              <div style={{ fontSize: '26px', fontWeight: 800, color: '#166534', marginTop: '4px' }}>
+                {proposals.filter(p => p.status === 'Approved').length}
               </div>
+              <div style={{ fontSize: '11px', color: '#166534', marginTop: '2px' }}>Active Corridors</div>
+            </div>
+          </div>
 
-              {!gisScanRun ? (
-                <div style={{ fontSize: '12px', color: '#64748b' }}>
-                  Evaluate proposed project alignment against Forest Land, Green Belt, Water Bodies, and Industrial Planning zones before formal submission.
-                </div>
-              ) : (
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                    <span style={{
-                      backgroundColor: '#fff7ed',
-                      color: '#c2410c',
-                      border: '1px solid #fed7aa',
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      padding: '2px 8px',
-                      borderRadius: '4px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}>
-                      <AlertTriangle size={12} /> HIGH RISK (Decision Support Flag)
-                    </span>
-                    <span style={{ fontSize: '11px', color: '#64748b' }}>
-                      3 Sensitive Layer Intersections Detected
-                    </span>
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', color: '#334155', backgroundColor: '#ffffff', padding: '10px 12px', borderRadius: '4px', border: '1px solid #e2e8f0', marginBottom: '10px' }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
-                      <span style={{ color: '#15803d', fontWeight: 700 }}>• Forest Land (Mulshi Block III):</span>
-                      <span>8.4 Ha overlap. MoEFCC Stage-I Forest Clearance (FCA 1980) required prior to declaration.</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
-                      <span style={{ color: '#84cc16', fontWeight: 700 }}>• Green Belt (PMRDA Buffer):</span>
-                      <span>3.2 Ha overlap. Compensatory tree plantation plan (1:3 sapling ratio) required.</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
-                      <span style={{ color: '#0284c7', fontWeight: 700 }}>• Riparian Buffer (Mula River):</span>
-                      <span>1.1 Ha overlap. WRD high flood level clearance required.</span>
-                    </div>
-                  </div>
-
-                  <div style={{ fontSize: '11px', color: '#0369a1', backgroundColor: '#f0f9ff', padding: '6px 8px', borderRadius: '4px', marginBottom: '10px' }}>
-                    ℹ️ <strong>Demo/Mock Layer • Authority Integration Ready:</strong> These intersections are decision support notifications and will not silently block submission.
-                  </div>
-
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#0f172a', cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={gisAcknowledged}
-                      onChange={(e) => setGisAcknowledged(e.target.checked)}
-                    />
-                    <span>I acknowledge the statutory environmental clearance requirements identified by the GIS overlay.</span>
-                  </label>
-                </div>
-              )}
+          {/* Proposals Table */}
+          <div style={{ backgroundColor: '#ffffff', border: '1px solid var(--outline-variant)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--outline-variant)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'var(--primary)' }}>
+                My Project Proposals Registry
+              </h3>
+              <span style={{ fontSize: '12px', color: 'var(--on-surface-variant)' }}>
+                Showing <strong>{proposals.length}</strong> proposals
+              </span>
             </div>
 
-            <button
-              type="submit"
-              style={{
-                backgroundColor: '#0a6d3a',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: 'var(--radius-md)',
-                padding: '12px 24px',
-                fontSize: '14px',
-                fontWeight: 700,
-                cursor: 'pointer'
-              }}
-            >
-              <Send size={16} /> Submit Proposal to District Verification Queue
-            </button>
-          </form>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#0a6d3a', color: '#ffffff' }}>
+                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>Proposal ID</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>Project Name</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>Project Type</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>Location</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>Land Required</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>Submitted Date</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>Status</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {proposals.map((prop) => {
+                  const isClarification = prop.status === 'Clarification Required';
+                  const isApproved = prop.status === 'Approved';
+                  return (
+                    <tr key={prop.id} style={{ borderBottom: '1px solid var(--outline-variant)' }}>
+                      <td style={{ padding: '14px 16px', fontWeight: 800, color: '#0284c7' }}>{prop.id}</td>
+                      <td style={{ padding: '14px 16px', fontWeight: 700 }}>{prop.title}</td>
+                      <td style={{ padding: '14px 16px' }}>{prop.projectType}</td>
+                      <td style={{ padding: '14px 16px' }}>{prop.district}, {prop.state}</td>
+                      <td style={{ padding: '14px 16px', fontWeight: 700, color: '#9a3412' }}>{prop.totalLandRequiredAcres} Acres</td>
+                      <td style={{ padding: '14px 16px' }}>{prop.submittedDate}</td>
+                      <td style={{ padding: '14px 16px' }}>
+                        <span style={{
+                          padding: '4px 10px',
+                          borderRadius: '4px',
+                          fontSize: '11px',
+                          fontWeight: 800,
+                          backgroundColor: isApproved ? '#f0fdf4' : isClarification ? '#fff1f2' : '#eff6ff',
+                          color: isApproved ? '#166534' : isClarification ? '#991b1b' : '#1d4ed8',
+                          border: `1px solid ${isApproved ? '#bbf7d0' : isClarification ? '#fecdd3' : '#bfdbfe'}`
+                        }}>
+                          {isClarification && '⚠ '}
+                          {prop.status}
+                        </span>
+                      </td>
+                      <td style={{ padding: '14px 16px' }}>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button
+                            onClick={() => {
+                              setSelectedProposal(prop);
+                              setDetailModalOpen(true);
+                            }}
+                            style={{
+                              padding: '5px 10px',
+                              backgroundColor: '#0a2540',
+                              color: '#ffffff',
+                              border: 'none',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            <Eye size={12} /> Inspect Dossier
+                          </button>
+
+                          {isClarification && (
+                            <button
+                              onClick={() => {
+                                setSelectedProposal(prop);
+                                setDetailModalOpen(true);
+                              }}
+                              style={{
+                                padding: '5px 10px',
+                                backgroundColor: '#dc2626',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              <Send size={12} /> Respond
+                            </button>
+                          )}
+
+                          {isApproved && (
+                            <button
+                              onClick={() => navigate('/agency/gis')}
+                              style={{
+                                padding: '5px 10px',
+                                backgroundColor: '#059669',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              <MapPin size={12} /> View in GIS
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -653,6 +683,28 @@ export const AgencyDashboard: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* New Project Proposal Multi-Step Wizard Modal */}
+      <NewProjectProposalWizard
+        isOpen={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        onSuccess={(newP) => {
+          setProposals(getStoredProposals());
+          setSuccessMsg(`Project proposal "${newP.title}" (${newP.id}) successfully submitted to Government for statutory review!`);
+          setActiveTab('NEW_PROPOSAL');
+        }}
+      />
+
+      {/* Proposal Detail & Dossier Modal */}
+      <ProposalDetailModal
+        isOpen={detailModalOpen}
+        proposal={selectedProposal}
+        onClose={() => setDetailModalOpen(false)}
+        onUpdate={(updated) => {
+          setProposals(getStoredProposals());
+          setSelectedProposal(updated);
+        }}
+      />
     </div>
   );
 };

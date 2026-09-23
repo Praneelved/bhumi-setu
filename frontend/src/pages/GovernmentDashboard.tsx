@@ -9,6 +9,8 @@ import type { VerificationCase, GovernmentOfficer, AuthorityLevel } from '../typ
 import { DEFAULT_OFFICERS, getStoredCases, resetCasesToDefault } from '../mock/governmentMockData';
 import { OfficerHeaderBanner } from '../components/government/OfficerHeaderBanner';
 import { getStoredUser } from '../services/api';
+import { getStoredProposals, type ProjectProposal } from '../data/projectProposalData';
+import { GovernmentProposalReviewModal } from '../components/government/GovernmentProposalReviewModal';
 
 interface GovernmentDashboardProps {
   tier?: 'DISTRICT' | 'STATE' | 'CENTRAL';
@@ -31,7 +33,12 @@ export const GovernmentDashboard: React.FC<GovernmentDashboardProps> = ({ tier }
   const [cases, setCases] = useState<VerificationCase[]>([]);
   const [selectedAuthority, setSelectedAuthority] = useState<AuthorityLevel>(effectiveAuthority);
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState<'ROLE_QUEUE' | 'ALL_CASES'>('ROLE_QUEUE');
+  const [viewMode, setViewMode] = useState<'ROLE_QUEUE' | 'ALL_CASES' | 'PROJECT_PROPOSALS'>('ROLE_QUEUE');
+
+  // Proposal review state
+  const [proposals, setProposals] = useState<ProjectProposal[]>([]);
+  const [selectedProposalForReview, setSelectedProposalForReview] = useState<ProjectProposal | null>(null);
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
 
   const loadData = () => {
     fetch('/api/verification/cases')
@@ -48,9 +55,14 @@ export const GovernmentDashboard: React.FC<GovernmentDashboardProps> = ({ tier }
       });
   };
 
+  const refreshProposals = () => {
+    setProposals(getStoredProposals());
+  };
+
   useEffect(() => {
     setSelectedAuthority(effectiveAuthority);
     loadData();
+    refreshProposals();
   }, [effectiveAuthority]);
 
   const currentOfficer: GovernmentOfficer = DEFAULT_OFFICERS[selectedAuthority];
@@ -183,6 +195,55 @@ export const GovernmentDashboard: React.FC<GovernmentDashboardProps> = ({ tier }
         return (
           <span style={{ backgroundColor: '#fff7ed', color: '#9a3412', border: '1px solid #ffedd5', padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 700 }}>
             Stage 3: Central
+          </span>
+        );
+    }
+  };
+
+  // Filter proposals
+  const filteredProposals = proposals.filter(p => {
+    const q = searchTerm.toLowerCase();
+    return (
+      p.id.toLowerCase().includes(q) ||
+      p.title.toLowerCase().includes(q) ||
+      p.agencyDetails.agencyName.toLowerCase().includes(q) ||
+      p.district.toLowerCase().includes(q) ||
+      p.projectType.toLowerCase().includes(q)
+    );
+  });
+
+  const pendingProposalsCount = proposals.filter(p => p.status !== 'Approved' && p.status !== 'Draft').length;
+
+  const getProposalStatusBadge = (status: ProjectProposal['status']) => {
+    switch (status) {
+      case 'Approved':
+        return (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 800 }}>
+            <CheckCircle2 size={12} /> Approved (In GIS)
+          </span>
+        );
+      case 'Clarification Required':
+        return (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: '#fff1f2', color: '#be123c', border: '1px solid #fecdd3', padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 800 }}>
+            <AlertTriangle size={12} /> Clarification Sent
+          </span>
+        );
+      case 'Submitted – Pending Government Review':
+        return (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 800 }}>
+            <Clock size={12} /> Submitted for Review
+          </span>
+        );
+      case 'Under Government Review':
+        return (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 800 }}>
+            <Clock size={12} /> Under Scrutiny
+          </span>
+        );
+      default:
+        return (
+          <span style={{ backgroundColor: '#f1f5f9', color: '#475569', padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 700 }}>
+            {status}
           </span>
         );
     }
@@ -372,89 +433,138 @@ export const GovernmentDashboard: React.FC<GovernmentDashboardProps> = ({ tier }
           >
             All Cases ({cases.length})
           </button>
+
+          <button
+            type="button"
+            onClick={() => setViewMode('PROJECT_PROPOSALS')}
+            style={{
+              padding: '6px 14px',
+              borderRadius: '4px',
+              border: 'none',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              backgroundColor: viewMode === 'PROJECT_PROPOSALS' ? '#0a2540' : 'transparent',
+              color: viewMode === 'PROJECT_PROPOSALS' ? '#ffffff' : '#475569',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <Layers size={13} />
+            <span>New Proposals ({proposals.length})</span>
+            {pendingProposalsCount > 0 && (
+              <span style={{
+                backgroundColor: viewMode === 'PROJECT_PROPOSALS' ? '#ef4444' : '#fee2e2',
+                color: viewMode === 'PROJECT_PROPOSALS' ? '#ffffff' : '#b91c1c',
+                fontSize: '10px',
+                padding: '1px 6px',
+                borderRadius: '8px',
+                fontWeight: 800
+              }}>
+                {pendingProposalsCount}
+              </span>
+            )}
+          </button>
         </div>
       </div>
 
-      {/* Cases Table */}
-      <div style={{
-        backgroundColor: 'var(--surface-container-lowest)',
-        border: '1px solid var(--outline-variant)',
-        borderRadius: 'var(--radius-lg)',
-        overflow: 'hidden',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
-      }}>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#0a2540', color: '#ffffff' }}>
-                <th style={{ padding: '12px 16px', fontWeight: 700 }}>Case ID</th>
-                <th style={{ padding: '12px 16px', fontWeight: 700 }}>Project Name</th>
-                <th style={{ padding: '12px 16px', fontWeight: 700 }}>Agency</th>
-                <th style={{ padding: '12px 16px', fontWeight: 700 }}>District & State</th>
-                <th style={{ padding: '12px 16px', fontWeight: 700 }}>Parcels</th>
-                <th style={{ padding: '12px 16px', fontWeight: 700 }}>Gating Pipeline Status</th>
-                <th style={{ padding: '12px 16px', fontWeight: 700 }}>Current Stage</th>
-                <th style={{ padding: '12px 16px', fontWeight: 700 }}>Overall Status</th>
-                <th style={{ padding: '12px 16px', fontWeight: 700, textAlign: 'right' }}>Stage Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {roleFilteredCases.map((c) => {
-                const isDistrictDone = c.stages.DISTRICT_COLLECTOR.status === 'COMPLETED';
-                const isStateDone = c.stages.STATE_GOVERNMENT.status === 'COMPLETED';
-                const isCentralDone = c.stages.CENTRAL_MINISTRY.status === 'COMPLETED';
+      {/* Conditionally Render: Project Proposals Review Table OR Acquisition Cases Table */}
+      {viewMode === 'PROJECT_PROPOSALS' ? (
+        <div style={{
+          backgroundColor: 'var(--surface-container-lowest)',
+          border: '1px solid var(--outline-variant)',
+          borderRadius: 'var(--radius-lg)',
+          overflow: 'hidden',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+        }}>
+          {/* Section banner */}
+          <div style={{
+            padding: '14px 20px',
+            backgroundColor: '#0a2540',
+            color: '#ffffff',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <div>
+              <div style={{ fontSize: '14px', fontWeight: 800 }}>Agency Infrastructure Proposals Awaiting Statutory Review</div>
+              <div style={{ fontSize: '11px', color: '#94a3b8' }}>Review GIS boundary, cadastral affected parcels, DPR docs, request clarification, or approve directly into GIS.</div>
+            </div>
+            <div style={{ fontSize: '12px', color: '#cbd5e1' }}>
+              Logged in as: <strong style={{ color: '#ffffff' }}>{currentOfficer.name}</strong> ({currentOfficer.designation})
+            </div>
+          </div>
 
-                return (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid var(--outline-variant)', color: '#475569' }}>
+                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>Proposal ID</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>Project Title & Scope</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>Submitting Agency</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>Location</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>GIS Extent</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>Est. Outlay</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>Status</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 700, textAlign: 'right' }}>Statutory Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredProposals.map((p) => (
                   <tr
-                    key={c.id}
+                    key={p.id}
                     style={{
                       borderBottom: '1px solid var(--outline-variant)',
+                      backgroundColor: p.status === 'Clarification Required' ? '#fffbfc' : 'transparent',
                       transition: 'background 0.15s ease'
                     }}
                   >
-                    <td style={{ padding: '14px 16px', fontWeight: 700, color: 'var(--primary)', whiteSpace: 'nowrap' }}>
-                      {c.id}
+                    <td style={{ padding: '14px 16px', fontWeight: 800, color: 'var(--primary)', whiteSpace: 'nowrap' }}>
+                      <div>{p.id}</div>
+                      <div style={{ fontSize: '10px', color: '#64748b' }}>{p.submittedDate}</div>
                     </td>
-                    <td style={{ padding: '14px 16px', fontWeight: 700, color: 'var(--on-surface)', maxWidth: '240px' }}>
-                      {c.projectName}
-                    </td>
-                    <td style={{ padding: '14px 16px', color: 'var(--on-surface-variant)', fontSize: '12px' }}>
-                      {c.agency}
-                    </td>
-                    <td style={{ padding: '14px 16px', color: 'var(--on-surface-variant)', fontSize: '12px', whiteSpace: 'nowrap' }}>
-                      {c.district}, {c.state}
-                    </td>
-                    <td style={{ padding: '14px 16px', fontWeight: 700, color: 'var(--primary)' }}>
-                      {c.totalParcels}
-                    </td>
-                    {/* Pipeline mini indicator */}
-                    <td style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700 }}>
-                        <span style={{ color: isDistrictDone ? '#166534' : '#0369a1' }}>
-                          D: {isDistrictDone ? '✓' : '●'}
+                    <td style={{ padding: '14px 16px', maxWidth: '280px' }}>
+                      <div style={{ fontWeight: 800, color: '#0f172a' }}>{p.title}</div>
+                      <div style={{ display: 'flex', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '10px', backgroundColor: '#e2e8f0', color: '#334155', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                          {p.projectType}
                         </span>
-                        <span style={{ color: '#cbd5e1' }}>→</span>
-                        <span style={{ color: isStateDone ? '#166534' : isDistrictDone ? '#0369a1' : '#94a3b8' }}>
-                          S: {isStateDone ? '✓' : isDistrictDone ? '●' : '🔒'}
-                        </span>
-                        <span style={{ color: '#cbd5e1' }}>→</span>
-                        <span style={{ color: isCentralDone ? '#166534' : isStateDone ? '#0369a1' : '#94a3b8' }}>
-                          C: {isCentralDone ? '✓' : isStateDone ? '●' : '🔒'}
+                        <span style={{ fontSize: '10px', backgroundColor: '#f1f5f9', color: '#475569', padding: '2px 6px', borderRadius: '4px' }}>
+                          {p.projectCategory}
                         </span>
                       </div>
                     </td>
-                    <td style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>
-                      {getStageBadge(c.currentStage)}
+                    <td style={{ padding: '14px 16px', color: '#334155', fontSize: '12px' }}>
+                      <div style={{ fontWeight: 700 }}>{p.agencyDetails.agencyName}</div>
+                      <div style={{ fontSize: '11px', color: '#64748b' }}>{p.agencyDetails.authorizedRepresentative}</div>
+                    </td>
+                    <td style={{ padding: '14px 16px', color: '#334155', fontSize: '12px', whiteSpace: 'nowrap' }}>
+                      <div><strong>{p.village}</strong>, {p.taluka}</div>
+                      <div style={{ fontSize: '11px', color: '#64748b' }}>{p.district}, {p.state}</div>
+                    </td>
+                    <td style={{ padding: '14px 16px', whiteSpace: 'nowrap', fontSize: '12px' }}>
+                      <div><strong>{p.approximateProjectAreaAcres}</strong> Acres</div>
+                      <div style={{ fontSize: '11px', color: '#64748b' }}>
+                        {p.affectedParcelsCount} parcels • {p.affectedLandownersCount} owners
+                      </div>
+                    </td>
+                    <td style={{ padding: '14px 16px', whiteSpace: 'nowrap', fontSize: '12px' }}>
+                      <div style={{ fontWeight: 800, color: '#0f172a' }}>₹{p.estimatedTotalCostCr.toLocaleString()} Cr</div>
+                      <div style={{ fontSize: '10px', color: '#16a34a' }}>Land: ₹{p.landAcquisitionCostCr.toLocaleString()} Cr</div>
                     </td>
                     <td style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>
-                      {getStatusBadge(c)}
+                      {getProposalStatusBadge(p.status)}
                     </td>
                     <td style={{ padding: '14px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                       <button
                         type="button"
-                        onClick={() => handleOpenCase(c)}
+                        onClick={() => {
+                          setSelectedProposalForReview(p);
+                          setReviewModalOpen(true);
+                        }}
                         style={{
-                          backgroundColor: '#0a2540',
+                          backgroundColor: p.status === 'Approved' ? '#047857' : '#0a2540',
                           color: '#ffffff',
                           border: 'none',
                           borderRadius: 'var(--radius-md)',
@@ -468,23 +578,150 @@ export const GovernmentDashboard: React.FC<GovernmentDashboardProps> = ({ tier }
                           boxShadow: '0 2px 4px rgba(10, 37, 64, 0.2)'
                         }}
                       >
-                        <Eye size={14} /> Review Stage
+                        <Eye size={14} /> {p.status === 'Approved' ? 'View Approved Dossier' : 'Review & Decide'}
                       </button>
                     </td>
                   </tr>
-                );
-              })}
-              {roleFilteredCases.length === 0 && (
-                <tr>
-                  <td colSpan={9} style={{ padding: '32px', textAlign: 'center', color: 'var(--outline)' }}>
-                    No cases pending in this verification queue.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                ))}
+                {filteredProposals.length === 0 && (
+                  <tr>
+                    <td colSpan={8} style={{ padding: '36px', textAlign: 'center', color: '#64748b' }}>
+                      No project proposals found matching criteria.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      ) : (
+        /* Cases Table */
+        <div style={{
+          backgroundColor: 'var(--surface-container-lowest)',
+          border: '1px solid var(--outline-variant)',
+          borderRadius: 'var(--radius-lg)',
+          overflow: 'hidden',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+        }}>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#0a2540', color: '#ffffff' }}>
+                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>Case ID</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>Project Name</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>Agency</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>District & State</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>Parcels</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>Gating Pipeline Status</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>Current Stage</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>Overall Status</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 700, textAlign: 'right' }}>Stage Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {roleFilteredCases.map((c) => {
+                  const isDistrictDone = c.stages.DISTRICT_COLLECTOR.status === 'COMPLETED';
+                  const isStateDone = c.stages.STATE_GOVERNMENT.status === 'COMPLETED';
+                  const isCentralDone = c.stages.CENTRAL_MINISTRY.status === 'COMPLETED';
+
+                  return (
+                    <tr
+                      key={c.id}
+                      style={{
+                        borderBottom: '1px solid var(--outline-variant)',
+                        transition: 'background 0.15s ease'
+                      }}
+                    >
+                      <td style={{ padding: '14px 16px', fontWeight: 700, color: 'var(--primary)', whiteSpace: 'nowrap' }}>
+                        {c.id}
+                      </td>
+                      <td style={{ padding: '14px 16px', fontWeight: 700, color: 'var(--on-surface)', maxWidth: '240px' }}>
+                        {c.projectName}
+                      </td>
+                      <td style={{ padding: '14px 16px', color: 'var(--on-surface-variant)', fontSize: '12px' }}>
+                        {c.agency}
+                      </td>
+                      <td style={{ padding: '14px 16px', color: 'var(--on-surface-variant)', fontSize: '12px', whiteSpace: 'nowrap' }}>
+                        {c.district}, {c.state}
+                      </td>
+                      <td style={{ padding: '14px 16px', fontWeight: 700, color: 'var(--primary)' }}>
+                        {c.totalParcels}
+                      </td>
+                      {/* Pipeline mini indicator */}
+                      <td style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700 }}>
+                          <span style={{ color: isDistrictDone ? '#166534' : '#0369a1' }}>
+                            D: {isDistrictDone ? '✓' : '●'}
+                          </span>
+                          <span style={{ color: '#cbd5e1' }}>→</span>
+                          <span style={{ color: isStateDone ? '#166534' : isDistrictDone ? '#0369a1' : '#94a3b8' }}>
+                            S: {isStateDone ? '✓' : isDistrictDone ? '●' : '🔒'}
+                          </span>
+                          <span style={{ color: '#cbd5e1' }}>→</span>
+                          <span style={{ color: isCentralDone ? '#166534' : isStateDone ? '#0369a1' : '#94a3b8' }}>
+                            C: {isCentralDone ? '✓' : isStateDone ? '●' : '🔒'}
+                          </span>
+                        </div>
+                      </td>
+                      <td style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>
+                        {getStageBadge(c.currentStage)}
+                      </td>
+                      <td style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>
+                        {getStatusBadge(c)}
+                      </td>
+                      <td style={{ padding: '14px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenCase(c)}
+                          style={{
+                            backgroundColor: '#0a2540',
+                            color: '#ffffff',
+                            border: 'none',
+                            borderRadius: 'var(--radius-md)',
+                            padding: '8px 14px',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            boxShadow: '0 2px 4px rgba(10, 37, 64, 0.2)'
+                          }}
+                        >
+                          <Eye size={14} /> Review Stage
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {roleFilteredCases.length === 0 && (
+                  <tr>
+                    <td colSpan={9} style={{ padding: '32px', textAlign: 'center', color: 'var(--outline)' }}>
+                      No cases pending in this verification queue.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Government Proposal Review Modal */}
+      {reviewModalOpen && selectedProposalForReview && (
+        <GovernmentProposalReviewModal
+          proposal={selectedProposalForReview}
+          officerName={currentOfficer.name}
+          officerDesignation={currentOfficer.designation}
+          onClose={() => {
+            setReviewModalOpen(false);
+            setSelectedProposalForReview(null);
+          }}
+          onProposalUpdated={() => {
+            refreshProposals();
+          }}
+        />
+      )}
     </div>
   );
 };
