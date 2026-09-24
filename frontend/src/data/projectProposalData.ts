@@ -645,3 +645,90 @@ export const approveProposalAndCreateProject = (
   submitOrUpdateProposal(updated);
   return { proposal: updated, newProjectId };
 };
+
+// Government Officer Rejection action
+export const rejectProposal = (
+  proposalId: string,
+  officerName: string,
+  officerDesignation: string,
+  rejectionReason: string
+): ProjectProposal | null => {
+  const all = getStoredProposals();
+  const p = all.find(x => x.id === proposalId);
+  if (!p) return null;
+
+  const now = new Date().toLocaleString();
+  const updated: ProjectProposal = {
+    ...p,
+    status: 'Rejected',
+    currentWorkflowStage: 'REJECTED',
+    lastUpdated: now,
+    reviewedByOfficer: `${officerName} (${officerDesignation})`,
+    governmentReviewNotes: rejectionReason || 'Proposal rejected by Competent Authority under statutory provisions.'
+  };
+
+  submitOrUpdateProposal(updated);
+  return updated;
+};
+
+// Sync any existing approved proposals into AGENCY_PROJECTS and GOV_PROJECTS
+export const syncApprovedProposalsToGis = (): void => {
+  try {
+    const all = getStoredProposals();
+    const approved = all.filter(p => p.status === 'Approved' && p.approvedProjectId);
+    for (const p of approved) {
+      if (!AGENCY_PROJECTS.some(x => x.id === p.approvedProjectId)) {
+        const newProjectEntry: AgencyProject = {
+          id: p.approvedProjectId!,
+          code: `APPR-${p.id.slice(-5)}`,
+          name: p.title,
+          type: p.projectType === 'Railway' ? 'Railway' : p.projectType === 'Airport' ? 'Airport' : p.projectType === 'Metro' ? 'Metro Rail' : p.projectType === 'Highway' ? 'Highway' : 'Industrial',
+          agency: p.agencyDetails.agencyName,
+          agencyCode: p.agencyDetails.agencyId,
+          status: 'In Progress',
+          location: `${p.village}, ${p.taluka}, ${p.district}`,
+          district: p.district,
+          state: p.state,
+          totalAreaHa: p.approximateProjectAreaHa,
+          totalAreaAcres: p.approximateProjectAreaAcres,
+          totalParcels: p.affectedParcelsCount,
+          totalLandowners: p.affectedLandownersCount,
+          requiredLandAcres: p.totalLandRequiredAcres,
+          acquiredLandAcres: 0.0,
+          pendingLandAcres: p.totalLandRequiredAcres,
+          compensationPendingCount: p.affectedLandownersCount,
+          documentsPendingCount: p.affectedParcelsCount,
+          totalCompensationBudgetCr: p.landAcquisitionCostCr,
+          disbursedCompensationCr: 0.0,
+          center: p.corridorCenter,
+          zoom: 14.5,
+          corridorGeoJSON: {
+            type: 'Polygon',
+            coordinates: p.corridorCoordinates
+          }
+        };
+        AGENCY_PROJECTS.unshift(newProjectEntry);
+        const govProjectEntry: GovProject = {
+          ...newProjectEntry,
+          govStatus: 'Land Acquisition Started',
+          taluka: p.taluka,
+          disputedParcelsCount: 0,
+          collectorApprovalPendingCount: p.affectedParcelsCount,
+          priorityScore: 70,
+          estimatedCompletionDate: p.proposedCompletionDate,
+          nodalOfficer: {
+            name: p.reviewedByOfficer || 'Competent Authority',
+            designation: 'CALA / Revenue Officer',
+            contact: 'cala.approval@gov.in'
+          }
+        };
+        GOV_PROJECTS.unshift(govProjectEntry);
+      }
+    }
+  } catch (e) {
+    console.warn('Error syncing approved proposals to GIS:', e);
+  }
+};
+
+// Initial sync call on module load
+syncApprovedProposalsToGis();

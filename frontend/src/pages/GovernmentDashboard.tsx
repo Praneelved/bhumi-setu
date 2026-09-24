@@ -299,6 +299,29 @@ export const GovernmentDashboard: React.FC<GovernmentDashboardProps> = ({ tier }
           </div>
           <div style={{ fontSize: '11px', color: 'var(--on-surface-variant)', marginTop: '2px' }}>Final Gazette Award Sanction</div>
         </div>
+
+        <div
+          onClick={() => setViewMode('PROJECT_PROPOSALS')}
+          style={{
+            backgroundColor: viewMode === 'PROJECT_PROPOSALS' ? '#eff6ff' : '#ffffff',
+            border: `1px solid ${viewMode === 'PROJECT_PROPOSALS' ? '#3b82f6' : 'var(--outline-variant)'}`,
+            borderRadius: 'var(--radius-lg)',
+            padding: '16px',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.03)',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease'
+          }}
+          title="Click to review Agency Project Proposals"
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ fontSize: '12px', color: '#0284c7', fontWeight: 700, textTransform: 'uppercase' }}>New Project Proposals</div>
+            <span style={{ fontSize: '10px', backgroundColor: '#0284c7', color: '#ffffff', padding: '1px 6px', borderRadius: '8px', fontWeight: 800 }}>Agency</span>
+          </div>
+          <div style={{ fontSize: '28px', fontWeight: 700, color: '#0284c7', marginTop: '4px' }}>
+            {pendingProposalsCount}
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--on-surface-variant)', marginTop: '2px' }}>Awaiting Statutory Review →</div>
+        </div>
       </div>
 
       {/* Main Section Header */}

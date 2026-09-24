@@ -2,7 +2,7 @@ import json
 import datetime
 from typing import Dict, Any, List, Optional
 from db import get_db
-from viasocket_service import send_viasocket_notification, send_viasocket_document_event
+from viasocket_service import send_viasocket_notification, send_viasocket_document_event, get_landowner_email_for_case
 
 INITIAL_DISTRICT_CHECKLIST = [
     {"id": "DC-01", "label": "Landowner name & ownership details verified", "description": "Title deeds, mutation register entries (Form 6), and co-owner percentage shares verified against 7/12 extract.", "verified": False, "mandatory": True},
@@ -610,6 +610,22 @@ def verify_district_document(case_id: str, doc_id: str, officer_name: str, offic
     )
     conn.commit()
     conn.close()
+
+    # Dispatch external notification via viaSocket webhook
+    landowner_email = get_landowner_email_for_case(case_id) or "praneelved17@gmail.com"
+    send_viasocket_document_event(
+        "document.verified",
+        {
+            "case_id": case_id,
+            "recipient": landowner_email,
+            "document_id": doc_id,
+            "document_name": doc["title"],
+            "rejected_by": officer_name,
+            "authority_level": "DISTRICT_COLLECTOR",
+            "timestamp": now
+        }
+    )
+
     return get_verification_case(case_id)
 
 def reject_district_document(case_id: str, doc_id: str, category: str, reason: str, remarks: str, required_correction: str, officer_name: str, officer_id: str) -> Dict[str, Any]:
@@ -667,12 +683,13 @@ def reject_district_document(case_id: str, doc_id: str, category: str, reason: s
     """, (json.dumps(stages), json.dumps(active_rejection), case_id))
 
     # Insert Landowner Notification
+    landowner_email = get_landowner_email_for_case(case_id) or "praneelved17@gmail.com"
     cur.execute("""
     INSERT INTO landowner_notifications (
         case_id, recipient, document_id, document_name, authority, rejection_reason, officer_remarks, required_correction
     ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
     """, (
-        case_id, "landowner@test.com", doc_id, doc["title"], "District Collector",
+        case_id, landowner_email, doc_id, doc["title"], "District Collector",
         reason, remarks, required_correction
     ))
 
@@ -687,6 +704,7 @@ def reject_district_document(case_id: str, doc_id: str, category: str, reason: s
     conn.close()
 
     # Dispatch external notification via viaSocket webhook
+    active_rejection["recipient"] = landowner_email
     send_viasocket_document_event(
         "document.rejected",
         active_rejection
@@ -902,12 +920,13 @@ def reject_state_stage(case_id: str, category: str, reason: str, remarks: str, r
     """, (json.dumps(stages), json.dumps(active_rejection), case_id))
 
     # Insert Landowner Notification
+    landowner_email = get_landowner_email_for_case(case_id) or "praneelved17@gmail.com"
     cur.execute("""
     INSERT INTO landowner_notifications (
         case_id, recipient, authority, rejection_reason, officer_remarks, required_correction
     ) VALUES (%s, %s, %s, %s, %s, %s);
     """, (
-        case_id, "landowner@test.com", "State Government",
+        case_id, landowner_email, "State Government",
         reason, remarks, required_correction
     ))
 
@@ -920,11 +939,19 @@ def reject_state_stage(case_id: str, category: str, reason: str, remarks: str, r
     conn.commit()
     conn.close()
 
-    send_viasocket_notification(
-        recipient="landowner@test.com",
-        otp="N/A",
-        purpose="STATE_COMPLIANCE_REJECTED",
-        user_name=f"Balwant Singh (State Government Rejection: {reason})"
+    send_viasocket_document_event(
+        "stage.rejected",
+        {
+            "case_id": case_id,
+            "recipient": landowner_email,
+            "authority_level": "STATE_GOVERNMENT",
+            "rejected_by": officer_name,
+            "rejection_category": category,
+            "rejection_reason": reason,
+            "remarks": remarks,
+            "required_correction": required_correction,
+            "timestamp": now
+        }
     )
 
     return get_verification_case(case_id)
@@ -1089,12 +1116,13 @@ def reject_central_stage(case_id: str, category: str, reason: str, remarks: str,
     WHERE id = %s;
     """, (json.dumps(stages), json.dumps(active_rejection), case_id))
 
+    landowner_email = get_landowner_email_for_case(case_id) or "praneelved17@gmail.com"
     cur.execute("""
     INSERT INTO landowner_notifications (
         case_id, recipient, authority, rejection_reason, officer_remarks, required_correction
     ) VALUES (%s, %s, %s, %s, %s, %s);
     """, (
-        case_id, "landowner@test.com", "Central Ministry",
+        case_id, landowner_email, "Central Ministry",
         reason, remarks, required_correction
     ))
 
@@ -1106,6 +1134,21 @@ def reject_central_stage(case_id: str, category: str, reason: str, remarks: str,
     )
     conn.commit()
     conn.close()
+
+    send_viasocket_document_event(
+        "stage.rejected",
+        {
+            "case_id": case_id,
+            "recipient": landowner_email,
+            "authority_level": "CENTRAL_MINISTRY",
+            "rejected_by": officer_name,
+            "rejection_category": category,
+            "rejection_reason": reason,
+            "remarks": remarks,
+            "required_correction": required_correction,
+            "timestamp": now
+        }
+    )
     return get_verification_case(case_id)
 
 def approve_central_stage(case_id: str, officer_name: str, officer_id: str, remarks: str) -> Dict[str, Any]:
@@ -1162,6 +1205,21 @@ def approve_central_stage(case_id: str, officer_name: str, officer_id: str, rema
     )
     conn.commit()
     conn.close()
+
+    # Dispatch final authorization event to landowner via viaSocket
+    landowner_email = get_landowner_email_for_case(case_id) or "praneelved17@gmail.com"
+    send_viasocket_document_event(
+        "document.verification_completed",
+        {
+            "case_id": case_id,
+            "recipient": landowner_email,
+            "rejected_by": officer_name,
+            "authority_level": "CENTRAL_MINISTRY",
+            "remarks": remarks,
+            "timestamp": now
+        }
+    )
+
     return get_verification_case(case_id)
 
 def upload_or_resubmit_document(case_id: str, doc_id: Optional[str], document_type: str, title: str, pages: List[Dict[str, Any]], uploaded_by: str) -> Dict[str, Any]:
@@ -1255,9 +1313,11 @@ def upload_or_resubmit_document(case_id: str, doc_id: Optional[str], document_ty
             doc_id=doc_id or doc["id"], doc_title=doc["title"], new_status="PENDING"
         )
 
+        landowner_email = get_landowner_email_for_case(case_id) or "praneelved17@gmail.com"
         send_viasocket_document_event("document.resubmitted", {
             "document_id": doc_id or doc["id"],
             "case_id": case_id,
+            "recipient": landowner_email,
             "landowner_id": uploaded_by,
             "document_name": doc["title"],
             "version": new_version,

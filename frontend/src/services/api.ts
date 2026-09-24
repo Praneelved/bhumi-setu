@@ -789,3 +789,34 @@ export async function fetchParcelConstraints(parcelId: string): Promise<ParcelCo
   if (!res.ok) throw new Error('Failed to fetch parcel constraints');
   return res.json();
 }
+
+export interface ProposalNotificationResponse {
+  success: boolean;
+  event_type: string;
+  message: string;
+  viasocket_status: number;
+}
+
+export async function dispatchProposalNotificationEvent(
+  eventType: 'proposal.submitted' | 'proposal.clarification_requested' | 'proposal.approved' | 'proposal.rejected',
+  proposal: any,
+  details?: Record<string, any>
+): Promise<ProposalNotificationResponse> {
+  const res = await fetch(`${API_BASE}/api/notifications/proposal-event`, {
+    method: 'POST',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      event_type: eventType,
+      proposal,
+      details: details || {}
+    })
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Failed to dispatch ViaSocket notification' }));
+    throw new Error(err.detail || 'Failed to dispatch ViaSocket notification');
+  }
+
+  return res.json();
+}
+

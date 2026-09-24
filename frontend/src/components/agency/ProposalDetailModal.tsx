@@ -25,8 +25,10 @@ import {
 import {
   type ProjectProposal,
   type ProposalWorkflowStage,
+  type AffectedProposalParcel,
   submitOrUpdateProposal
 } from '../../data/projectProposalData';
+import { ParcelDetailModal } from './ParcelDetailModal';
 
 interface DetailModalProps {
   proposal: ProjectProposal | null;
@@ -47,6 +49,7 @@ export const ProposalDetailModal: React.FC<DetailModalProps> = ({
   const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'GIS_LAND' | 'FINANCIALS' | 'DOCUMENTS' | 'TIMELINE'>('OVERVIEW');
   const [agencyReply, setAgencyReply] = useState<string>('');
   const [actionSuccessNotice, setActionSuccessNotice] = useState<string | null>(null);
+  const [inspectedParcel, setInspectedParcel] = useState<AffectedProposalParcel | null>(null);
 
   if (!isOpen || !proposal) return null;
 
@@ -83,18 +86,21 @@ export const ProposalDetailModal: React.FC<DetailModalProps> = ({
     setTimeout(() => setActionSuccessNotice(null), 4000);
   };
 
+  const isRejected = proposal.status === 'Rejected' || proposal.currentWorkflowStage === 'REJECTED';
+  const isApproved = proposal.status === 'Approved' || proposal.currentWorkflowStage === 'PROJECT_CREATED';
+
   // Workflow timeline steps
   const timelineSteps: { key: ProposalWorkflowStage; label: string }[] = [
     { key: 'PROPOSAL_CREATED', label: 'Proposal Created' },
     { key: 'SUBMITTED_TO_GOVERNMENT', label: 'Submitted to Government' },
     { key: 'GOVERNMENT_REVIEW', label: 'Government Review' },
     { key: 'CLARIFICATION_VERIFICATION', label: 'Clarification / Verification' },
-    { key: 'APPROVED', label: 'Approved' },
+    { key: 'APPROVED', label: isRejected ? 'Rejected' : 'Approved' },
     { key: 'PROJECT_CREATED', label: 'Project Created in GIS' }
   ];
 
   const getStepIndex = (stage: ProposalWorkflowStage) => {
-    if (stage === 'REJECTED') return 3;
+    if (stage === 'REJECTED') return 4;
     return timelineSteps.findIndex(s => s.key === stage);
   };
 
@@ -211,6 +217,27 @@ export const ProposalDetailModal: React.FC<DetailModalProps> = ({
         {actionSuccessNotice && (
           <div style={{ backgroundColor: '#f0fdf4', borderBottom: '1px solid #bbf7d0', color: '#166534', padding: '10px 24px', fontSize: '12px', fontWeight: 700 }}>
             ✓ {actionSuccessNotice}
+          </div>
+        )}
+
+        {/* REJECTED BANNER (If Active) */}
+        {isRejected && (
+          <div style={{
+            backgroundColor: '#fef2f2',
+            borderBottom: '1px solid #fecaca',
+            padding: '16px 24px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#991b1b', fontWeight: 800, fontSize: '13px', marginBottom: '4px' }}>
+              <AlertOctagon size={16} /> Proposal Rejected by Government Authority:
+            </div>
+            <div style={{ fontSize: '12px', color: '#7f1d1d', marginBottom: '6px', lineHeight: 1.5 }}>
+              "{proposal.governmentReviewNotes || 'Proposal rejected by Competent Authority under statutory provisions.'}"
+            </div>
+            {proposal.reviewedByOfficer && (
+              <div style={{ fontSize: '11px', color: '#991b1b' }}>
+                Reviewed by: <strong>{proposal.reviewedByOfficer}</strong> • Updated: {proposal.lastUpdated}
+              </div>
+            )}
           </div>
         )}
 
@@ -453,11 +480,23 @@ export const ProposalDetailModal: React.FC<DetailModalProps> = ({
                         <th style={{ padding: '8px 12px' }}>Affected Area</th>
                         <th style={{ padding: '8px 12px' }}>Category</th>
                         <th style={{ padding: '8px 12px' }}>Est. Compensation</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'center' }}>Action</th>
                       </tr>
                     </thead>
                     <tbody>
                       {proposal.affectedParcels.map(p => (
-                        <tr key={p.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <tr
+                          key={p.id}
+                          onClick={() => setInspectedParcel(p)}
+                          style={{
+                            borderBottom: '1px solid #f1f5f9',
+                            cursor: 'pointer',
+                            transition: 'background-color 0.15s ease'
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f0f9ff')}
+                          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                          title="Click to view cadastral parcel details"
+                        >
                           <td style={{ padding: '8px 12px', fontWeight: 700, color: '#0284c7' }}>{p.id}</td>
                           <td style={{ padding: '8px 12px', fontWeight: 700 }}>{p.surveyNumber}</td>
                           <td style={{ padding: '8px 12px' }}>{p.landownerName}</td>
@@ -465,6 +504,30 @@ export const ProposalDetailModal: React.FC<DetailModalProps> = ({
                           <td style={{ padding: '8px 12px', fontWeight: 700, color: '#9a3412' }}>{p.affectedAreaAcres} Ac</td>
                           <td style={{ padding: '8px 12px' }}>{p.landCategory}</td>
                           <td style={{ padding: '8px 12px', fontWeight: 700, color: '#166534' }}>₹{p.estimatedCompensationCr} Cr</td>
+                          <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setInspectedParcel(p);
+                              }}
+                              style={{
+                                padding: '4px 8px',
+                                backgroundColor: '#0a2540',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              View
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -627,6 +690,13 @@ export const ProposalDetailModal: React.FC<DetailModalProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Cadastral Parcel Detail Modal */}
+      <ParcelDetailModal
+        parcel={inspectedParcel}
+        isOpen={!!inspectedParcel}
+        onClose={() => setInspectedParcel(null)}
+      />
     </div>
   );
 };

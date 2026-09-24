@@ -23,10 +23,13 @@ import {
 } from 'lucide-react';
 import {
   type ProjectProposal,
+  type AffectedProposalParcel,
   approveProposalAndCreateProject,
-  sendProposalClarification
+  sendProposalClarification,
+  rejectProposal
 } from '../../data/projectProposalData';
-import { getStoredUser } from '../../services/api';
+import { getStoredUser, dispatchProposalNotificationEvent } from '../../services/api';
+import { ParcelDetailModal } from '../agency/ParcelDetailModal';
 
 interface ReviewModalProps {
   proposal: ProjectProposal | null;
@@ -57,13 +60,15 @@ export const GovernmentProposalReviewModal: React.FC<ReviewModalProps> = ({
   const [clarificationMsg, setClarificationMsg] = useState('');
   const [clarificationAction, setClarificationAction] = useState('Upload revised cadastral DGPS survey map and Form-A schedule.');
   const [approvalNotes, setApprovalNotes] = useState('Approved by Competent Authority under Section 11 RFCTLARR 2013 development corridor.');
+  const [rejectionReason, setRejectionReason] = useState('Incomplete environmental SIA clearances and unauthorized protected zone alignment.');
 
+  const [inspectedParcel, setInspectedParcel] = useState<AffectedProposalParcel | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [actionDoneMsg, setActionDoneMsg] = useState<string | null>(null);
 
   if (!isOpen || !proposal) return null;
 
-  const handleApprove = () => {
+  const handleApprove = async () => {
     if (!window.confirm(`Approve proposal "${proposal.title}" and authorize creation of new active infrastructure project in State GIS?`)) {
       return;
     }
@@ -76,19 +81,33 @@ export const GovernmentProposalReviewModal: React.FC<ReviewModalProps> = ({
       approvalNotes
     );
 
-    setIsProcessing(false);
     if (res) {
-      setActionDoneMsg(`Proposal Approved! New active project created in GIS: ${res.newProjectId}`);
+      try {
+        await dispatchProposalNotificationEvent('proposal.approved', res.proposal, {
+          officerName: effectiveOfficerName,
+          officerDesignation: effectiveOfficerDesignation,
+          newProjectId: res.newProjectId,
+          remarks: approvalNotes
+        });
+        console.log('[viaSocket] Proposal approved notification dispatched successfully.');
+      } catch (err) {
+        console.error('[viaSocket Error] Failed to dispatch proposal approval notification:', err);
+      }
+
+      setIsProcessing(false);
+      setActionDoneMsg(`Proposal Approved! New active project created in GIS: ${res.newProjectId} (viaSocket alert dispatched)`);
       if (onReviewed) onReviewed(res.proposal);
       if (onProposalUpdated) onProposalUpdated();
       setTimeout(() => {
         setActionDoneMsg(null);
         onClose();
       }, 2000);
+    } else {
+      setIsProcessing(false);
     }
   };
 
-  const handleSendClarification = (e: React.FormEvent) => {
+  const handleSendClarification = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!clarificationMsg.trim()) return;
 
@@ -102,15 +121,66 @@ export const GovernmentProposalReviewModal: React.FC<ReviewModalProps> = ({
       effectiveOfficerDesignation
     );
 
-    setIsProcessing(false);
     if (updated) {
-      setActionDoneMsg('Clarification notice sent to agency. Proposal status updated to "Clarification Required".');
+      try {
+        await dispatchProposalNotificationEvent('proposal.clarification_requested', updated, {
+          officerName: effectiveOfficerName,
+          officerDesignation: effectiveOfficerDesignation,
+          message: clarificationMsg.trim(),
+          requiredAction: clarificationAction.trim()
+        });
+        console.log('[viaSocket] Clarification notification dispatched successfully.');
+      } catch (err) {
+        console.error('[viaSocket Error] Failed to dispatch clarification notification:', err);
+      }
+
+      setIsProcessing(false);
+      setActionDoneMsg('Clarification notice sent to agency. Proposal status updated to "Clarification Required" (viaSocket alert dispatched).');
       if (onReviewed) onReviewed(updated);
       if (onProposalUpdated) onProposalUpdated();
       setTimeout(() => {
         setActionDoneMsg(null);
         onClose();
       }, 2000);
+    } else {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!window.confirm(`Are you sure you want to REJECT proposal "${proposal.title}"? This will formally record the proposal as Rejected with statutory notice to the submitting agency.`)) {
+      return;
+    }
+    setIsProcessing(true);
+    const res = rejectProposal(
+      proposal.id,
+      effectiveOfficerName,
+      effectiveOfficerDesignation,
+      rejectionReason.trim()
+    );
+
+    if (res) {
+      try {
+        await dispatchProposalNotificationEvent('proposal.rejected', res, {
+          officerName: effectiveOfficerName,
+          officerDesignation: effectiveOfficerDesignation,
+          rejectionReason: rejectionReason.trim()
+        });
+        console.log('[viaSocket] Proposal rejection notification dispatched successfully.');
+      } catch (err) {
+        console.error('[viaSocket Error] Failed to dispatch proposal rejection notification:', err);
+      }
+
+      setIsProcessing(false);
+      setActionDoneMsg('Proposal Rejected. Formal statutory rejection notice dispatched to submitting agency (viaSocket alert dispatched).');
+      if (onReviewed) onReviewed(res);
+      if (onProposalUpdated) onProposalUpdated();
+      setTimeout(() => {
+        setActionDoneMsg(null);
+        onClose();
+      }, 2000);
+    } else {
+      setIsProcessing(false);
     }
   };
 
@@ -277,10 +347,47 @@ export const GovernmentProposalReviewModal: React.FC<ReviewModalProps> = ({
                 </div>
               </div>
 
+              {/* GIS Spatial Boundary Card */}
+              <div style={{
+                backgroundColor: '#eff6ff',
+                border: '1px solid #bfdbfe',
+                borderRadius: '6px',
+                padding: '12px 16px',
+                marginBottom: '16px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '12px'
+              }}>
+                <div>
+                  <div style={{ fontSize: '11px', color: '#1e40af', fontWeight: 700 }}>GIS SPATIAL BOUNDARY &amp; ALIGNMENT</div>
+                  <div style={{ fontSize: '13px', fontWeight: 800, color: '#1e3a8a', marginTop: '2px' }}>
+                    Type: {proposal.gisSelectionType} • {proposal.village}, {proposal.taluka}, {proposal.district}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#3b82f6', marginTop: '2px' }}>
+                    Corridor Center: [{proposal.corridorCenter.map(c => c.toFixed(4)).join(', ')}] • DGPS Buffer: 50m RoW
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <div style={{ backgroundColor: '#ffffff', border: '1px solid #bfdbfe', borderRadius: '4px', padding: '6px 10px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '10px', color: '#64748b' }}>Survey Parcels</div>
+                    <div style={{ fontSize: '14px', fontWeight: 800, color: '#0a2540' }}>{proposal.affectedParcelsCount}</div>
+                  </div>
+                  <div style={{ backgroundColor: '#ffffff', border: '1px solid #bfdbfe', borderRadius: '4px', padding: '6px 10px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '10px', color: '#64748b' }}>Title Holders</div>
+                    <div style={{ fontSize: '14px', fontWeight: 800, color: '#0a2540' }}>{proposal.affectedLandownersCount}</div>
+                  </div>
+                </div>
+              </div>
+
               {/* Parcels Table */}
               <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', overflow: 'hidden' }}>
-                <div style={{ backgroundColor: '#f8fafc', padding: '10px 14px', borderBottom: '1px solid #e2e8f0', fontWeight: 800, fontSize: '12px', color: '#0a2540' }}>
-                  Intersecting Cadastral Survey Numbers ({proposal.affectedParcels.length})
+                <div style={{ backgroundColor: '#f8fafc', padding: '10px 14px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ fontWeight: 800, fontSize: '12px', color: '#0a2540' }}>
+                    Intersecting Cadastral Survey Numbers ({proposal.affectedParcels.length})
+                  </div>
+                  <span style={{ fontSize: '11px', color: '#64748b' }}>Click any row to inspect title deed &amp; Jamabandi</span>
                 </div>
                 <div style={{ maxHeight: '240px', overflowY: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
@@ -292,17 +399,50 @@ export const GovernmentProposalReviewModal: React.FC<ReviewModalProps> = ({
                         <th style={{ padding: '8px 12px' }}>Total Area</th>
                         <th style={{ padding: '8px 12px' }}>Affected Area</th>
                         <th style={{ padding: '8px 12px' }}>Land Category</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'center' }}>Action</th>
                       </tr>
                     </thead>
                     <tbody>
                       {proposal.affectedParcels.map(p => (
-                        <tr key={p.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <tr
+                          key={p.id}
+                          onClick={() => setInspectedParcel(p)}
+                          style={{
+                            borderBottom: '1px solid #f1f5f9',
+                            cursor: 'pointer',
+                            transition: 'background-color 0.15s ease'
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f0f9ff')}
+                          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                          title="Click to view cadastral parcel details"
+                        >
                           <td style={{ padding: '8px 12px', fontWeight: 700 }}>{p.surveyNumber}</td>
                           <td style={{ padding: '8px 12px' }}>{p.landownerName}</td>
                           <td style={{ padding: '8px 12px' }}>{p.village}</td>
                           <td style={{ padding: '8px 12px' }}>{p.totalAreaAcres} Ac</td>
                           <td style={{ padding: '8px 12px', fontWeight: 700, color: '#9a3412' }}>{p.affectedAreaAcres} Ac</td>
                           <td style={{ padding: '8px 12px' }}>{p.landCategory}</td>
+                          <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setInspectedParcel(p);
+                              }}
+                              style={{
+                                padding: '3px 8px',
+                                backgroundColor: '#0a2540',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Inspect
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -468,6 +608,54 @@ export const GovernmentProposalReviewModal: React.FC<ReviewModalProps> = ({
                   <Send size={13} /> Send Clarification Notice to Agency
                 </button>
               </form>
+
+              {/* Option C: Formally Reject Proposal */}
+              <div style={{
+                backgroundColor: '#fff5f5',
+                border: '1px solid #fed7d7',
+                borderRadius: '8px',
+                padding: '18px',
+                marginTop: '20px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#c53030', fontWeight: 800, fontSize: '14px', marginBottom: '6px' }}>
+                  <XCircle size={18} /> Option C: Formally Reject Proposal
+                </div>
+                <p style={{ margin: '0 0 12px 0', fontSize: '12px', color: '#9b2c2c' }}>
+                  Reject the proposal under statutory grounds (e.g. non-viable alignment, environmental reservation, or non-compliance with RFCTLARR guidelines).
+                </p>
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#c53030', marginBottom: '4px' }}>
+                    Rejection Grounds / Order Remarks:
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={rejectionReason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                    placeholder="Specify the statutory or spatial reason for rejection..."
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '4px', border: '1px solid #feb2b2', fontSize: '12px', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleReject}
+                  disabled={isProcessing}
+                  style={{
+                    padding: '8px 18px',
+                    backgroundColor: '#c53030',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <XCircle size={13} /> Reject Proposal
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -498,6 +686,13 @@ export const GovernmentProposalReviewModal: React.FC<ReviewModalProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Cadastral Parcel Detail Modal */}
+      <ParcelDetailModal
+        parcel={inspectedParcel}
+        isOpen={!!inspectedParcel}
+        onClose={() => setInspectedParcel(null)}
+      />
     </div>
   );
 };

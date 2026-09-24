@@ -36,7 +36,8 @@ import {
   submitOrUpdateProposal
 } from '../../data/projectProposalData';
 import { AGENCY_AFFECTED_PARCELS } from '../../data/agencyGisData';
-import { getStoredUser } from '../../services/api';
+import { getStoredUser, dispatchProposalNotificationEvent } from '../../services/api';
+import { ParcelDetailModal } from './ParcelDetailModal';
 
 interface WizardProps {
   isOpen: boolean;
@@ -56,6 +57,8 @@ export const NewProjectProposalWizard: React.FC<WizardProps> = ({
   // Wizard Step State (1 to 6)
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [saveSuccessNotice, setSaveSuccessNotice] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [inspectedParcel, setInspectedParcel] = useState<AffectedProposalParcel | null>(null);
 
   // STEP 1: Basic Project Details
   const [proposalId] = useState<string>(draftProposal?.id || generateNextProposalId());
@@ -369,8 +372,10 @@ export const NewProjectProposalWizard: React.FC<WizardProps> = ({
   };
 
   // Final Submit to Government
-  const handleSubmitProposal = (e: React.FormEvent) => {
+  const handleSubmitProposal = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
     if (!declarationAccepted) {
       alert('Please confirm and accept the statutory declaration before submitting.');
       return;
@@ -386,17 +391,29 @@ export const NewProjectProposalWizard: React.FC<WizardProps> = ({
     );
     if (!confirmed) return;
 
+    setIsSubmitting(true);
     const submitted = compileProposal('Submitted – Pending Government Review');
     submitOrUpdateProposal(submitted);
-    onSuccess(submitted);
-    onClose();
+
+    try {
+      await dispatchProposalNotificationEvent('proposal.submitted', submitted, {
+        recipientEmail: 'district.officer@test.gov'
+      });
+      console.log('[viaSocket] Proposal submitted notification dispatched successfully.');
+    } catch (err) {
+      console.error('[viaSocket Error] Failed to dispatch proposal submission notification:', err);
+    } finally {
+      setIsSubmitting(false);
+      onSuccess(submitted);
+      onClose();
+    }
   };
 
   const stepsList = [
     { number: 1, title: 'Project Information' },
-    { number: 2, title: 'Location & GIS' },
+    { number: 2, title: 'Location & Land Requirement' },
     { number: 3, title: 'Project Details' },
-    { number: 4, title: 'Land & Landowners' },
+    { number: 4, title: 'Land & Landowner Details' },
     { number: 5, title: 'Documents' },
     { number: 6, title: 'Review & Submit' }
   ];
@@ -1181,11 +1198,23 @@ export const NewProjectProposalWizard: React.FC<WizardProps> = ({
                         <th style={{ padding: '8px 12px' }}>Affected Area</th>
                         <th style={{ padding: '8px 12px' }}>Category</th>
                         <th style={{ padding: '8px 12px' }}>Est. Compensation</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'center' }}>Action</th>
                       </tr>
                     </thead>
                     <tbody>
                       {affectedParcels.map((p) => (
-                        <tr key={p.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <tr
+                          key={p.id}
+                          onClick={() => setInspectedParcel(p)}
+                          style={{
+                            borderBottom: '1px solid #f1f5f9',
+                            cursor: 'pointer',
+                            transition: 'background-color 0.15s ease'
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f0f9ff')}
+                          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                          title="Click to view cadastral parcel details"
+                        >
                           <td style={{ padding: '8px 12px', fontWeight: 700, color: '#0284c7' }}>{p.id}</td>
                           <td style={{ padding: '8px 12px', fontWeight: 700 }}>{p.surveyNumber}</td>
                           <td style={{ padding: '8px 12px' }}>{p.landownerName}</td>
@@ -1205,6 +1234,30 @@ export const NewProjectProposalWizard: React.FC<WizardProps> = ({
                             </span>
                           </td>
                           <td style={{ padding: '8px 12px', fontWeight: 700, color: '#166534' }}>₹{p.estimatedCompensationCr} Cr</td>
+                          <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setInspectedParcel(p);
+                              }}
+                              style={{
+                                padding: '4px 8px',
+                                backgroundColor: '#0a2540',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              <Eye size={11} /> View
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -1619,6 +1672,13 @@ export const NewProjectProposalWizard: React.FC<WizardProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Cadastral Parcel Detail Modal */}
+      <ParcelDetailModal
+        parcel={inspectedParcel}
+        isOpen={!!inspectedParcel}
+        onClose={() => setInspectedParcel(null)}
+      />
     </div>
   );
 };

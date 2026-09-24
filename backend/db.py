@@ -479,6 +479,19 @@ def init_db():
         pass
 
     cursor.execute("""
+    CREATE TABLE IF NOT EXISTS audit_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id VARCHAR(64),
+        action VARCHAR(128) NOT NULL,
+        resource_type VARCHAR(128) NOT NULL,
+        resource_id VARCHAR(64),
+        details TEXT,
+        ip_address VARCHAR(64),
+        timestamp TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS verification_audit_logs (
         id VARCHAR(64) PRIMARY KEY,
         case_id VARCHAR(64) NOT NULL,
