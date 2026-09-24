@@ -625,7 +625,7 @@ def seed_data(conn):
         ("usr-agency-01", "Vikramaditya Rao", "agency.admin@test.com", "9822002200", "Agency@123", "AGENCY", "AGENCY_ADMIN", "National Highways Authority of India (NHAI)", "Delhi", "Pan-India"),
         ("usr-agency-02", "Amitabh Deshmukh", "project.manager@test.com", "9822002201", "Project@123", "AGENCY", "PROJECT_MANAGER", "National Highways Authority of India (NHAI)", "Punjab", "Ludhiana"),
         ("usr-agency-03", "Harinder Sandhu", "field.officer@test.com", "9822002202", "Field@123", "AGENCY", "FIELD_OFFICER", "National Highways Authority of India (NHAI)", "Punjab", "Ludhiana"),
-        ("usr-landowner-01", "Balwant Singh", "pranilved17@gmail.com", "9372161379", "no-password", "PERSONAL", "LANDOWNER", None, "Punjab", "Ludhiana"),
+        ("usr-landowner-01", "Balwant Singh", "praneelved17@gmail.com", "9372161379", "no-password", "PERSONAL", "LANDOWNER", None, "Punjab", "Ludhiana"),
     ]
 
     user_ids = {}

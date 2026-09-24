@@ -19,7 +19,7 @@ export const PersonalLogin: React.FC = () => {
 
   // OTP State
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [recipientEmail, setRecipientEmail] = useState<string>('pranilved17@gmail.com');
+  const [recipientEmail, setRecipientEmail] = useState<string>('praneelved17@gmail.com');
 
   // UI State
   const [loading, setLoading] = useState(false);
