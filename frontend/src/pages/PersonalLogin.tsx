@@ -19,8 +19,7 @@ export const PersonalLogin: React.FC = () => {
 
   // OTP State
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [devOtp, setDevOtp] = useState<string | null>(null);
-  const [recipientEmail, setRecipientEmail] = useState<string>('praneelved17@gmail.com');
+  const [recipientEmail, setRecipientEmail] = useState<string>('pranilved17@gmail.com');
 
   // UI State
   const [loading, setLoading] = useState(false);
@@ -51,9 +50,6 @@ export const PersonalLogin: React.FC = () => {
         landownerIdOrCaseId: landownerCaseId
       });
       setSessionId(data.session_id);
-      if (data.dev_otp) {
-        setDevOtp(data.dev_otp);
-      }
       if (data.recipient_email) {
         setRecipientEmail(data.recipient_email);
       }
@@ -253,34 +249,16 @@ export const PersonalLogin: React.FC = () => {
                 gap: '8px'
               }}>
                 <div>
-                  📨 <strong>OTP Dispatched:</strong> A 6-digit verification code has been sent to <strong>{recipientEmail || 'your registered email'}</strong>.
+                  📨 <strong>OTP Dispatched via ViaSocket:</strong> A 6-digit verification code has been sent directly to <strong>{recipientEmail || 'your registered email'}</strong>. Please check your inbox.
                 </div>
-                {devOtp && (
-                  <div style={{
-                    backgroundColor: '#f0fdf4',
-                    border: '1px solid #bbf7d0',
-                    padding: '6px 10px',
-                    borderRadius: '6px',
-                    color: '#166534',
-                    fontSize: '12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between'
-                  }}>
-                    <span>⚡ <strong>Quick Login OTP:</strong> <code style={{ backgroundColor: '#dcfce7', padding: '2px 6px', borderRadius: '4px', fontWeight: 700, fontSize: '13px', letterSpacing: '2px' }}>{devOtp}</code> (or <code>123456</code>)</span>
-                    <span style={{ fontSize: '11px', color: '#15803d', fontWeight: 600 }}>Auto-filled</span>
-                  </div>
-                )}
               </div>
 
               <OTPVerification
                 sessionId={sessionId || ''}
                 maskedPhone={`+91 ${mobileNumber.slice(0, 5)}*****`}
-                devOtp={devOtp || undefined}
                 onVerify={handleOtpVerify}
                 onResend={async () => {
                   const res = await sendPersonalOTP({ mobileNumber: `+91${mobileNumber}`, landownerIdOrCaseId: landownerCaseId });
-                  if (res.dev_otp) setDevOtp(res.dev_otp);
                   if (res.recipient_email) setRecipientEmail(res.recipient_email);
                 }}
                 onBack={() => setStep('phone')}

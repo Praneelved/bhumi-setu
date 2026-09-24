@@ -190,6 +190,8 @@ def send_viasocket_notification(
     """
     Dispatches dynamic OTP & authentication alert data through ViaSocket webhook.
     Uses real recipient email entered or registered by user.
+    Provides complete email subject, body, to, recipient, and message fields so
+    ViaSocket email actions execute successfully without dropping empty fields.
     """
     target_email = (recipient or "").strip()
     env_override = os.getenv("TEST_NOTIFICATION_EMAIL", "").strip()
@@ -200,26 +202,77 @@ def send_viasocket_notification(
         print("[viaSocket Warning] No recipient email specified for OTP notification.")
         return False
 
+    if purpose == "CITIZEN_LOGIN":
+        subject = f"BhoomiSetu Login Verification OTP: {otp}"
+        msg = (
+            f"Dear {user_name},\n\n"
+            f"Your 6-digit verification code for BhoomiSetu Landowner & Citizen Portal is: {otp}\n\n"
+            f"This OTP is valid for 10 minutes. Please enter this code on the login screen to verify your account.\n\n"
+            f"BhoomiSetu National Land Acquisition Management Portal (NLAMS)"
+        )
+    elif purpose == "GOV_MFA":
+        subject = f"BhoomiSetu Government MFA Verification Code: {otp}"
+        msg = (
+            f"Dear {user_name},\n\n"
+            f"Your statutory 2FA / MFA verification code for Government Portal access is: {otp}\n\n"
+            f"Official authorization reference: GOV-SEC-{time.strftime('%Y%m%d')}."
+        )
+    elif purpose == "AGENCY_MFA":
+        subject = f"BhoomiSetu Agency MFA Verification Code: {otp}"
+        msg = (
+            f"Dear {user_name},\n\n"
+            f"Your Multi-Factor Authentication (MFA) code for Agency Project Management Portal is: {otp}\n\n"
+            f"Authorized Agency Session."
+        )
+    else:
+        subject = f"BhoomiSetu Verification Code: {otp}"
+        msg = f"Your verification code for {purpose} is: {otp}"
+
     payload = {
         "recipient": target_email,
+        "to": target_email,
+        "email": target_email,
         "otp": str(otp),
+        "code": str(otp),
+        "subject": subject,
+        "title": subject,
+        "body": msg,
+        "message": msg,
+        "content": msg,
+        "text": f"Your BhoomiSetu verification code is {otp}",
         "purpose": purpose,
         "user_name": user_name,
+        "name": user_name,
         "system": "BhoomiSetu NLAMS"
     }
 
-    label = f"OTP to {target_email}"
-    if sync:
-        try:
-            res = requests.post(VIASOCKET_URL, json=payload, timeout=5, verify=False)
-            print(f"[viaSocket {label}] Status {res.status_code} dispatched")
-            return res.status_code in (200, 201, 202)
-        except Exception as err:
-            print(f"[viaSocket {label} Error] {err}")
-            return False
-    else:
-        _dispatch_async_post(VIASOCKET_URL, payload, label)
-        return True
+    # Ensure both spellings (pranilved17@gmail.com and praneelved17@gmail.com) receive the OTP
+    recipients = [target_email]
+    if target_email.lower() == "pranilved17@gmail.com":
+        recipients.append("praneelved17@gmail.com")
+    elif target_email.lower() == "praneelved17@gmail.com":
+        recipients.append("pranilved17@gmail.com")
+
+    success = True
+    for email_addr in set(recipients):
+        p = dict(payload)
+        p["recipient"] = email_addr
+        p["to"] = email_addr
+        p["email"] = email_addr
+        label = f"OTP to {email_addr}"
+        if sync:
+            try:
+                res = requests.post(VIASOCKET_URL, json=p, timeout=5, verify=False)
+                print(f"[viaSocket {label}] Status {res.status_code} dispatched")
+                if res.status_code not in (200, 201, 202):
+                    success = False
+            except Exception as err:
+                print(f"[viaSocket {label} Error] {err}")
+                success = False
+        else:
+            _dispatch_async_post(VIASOCKET_URL, p, label)
+
+    return success
 
 
 def send_viasocket_document_event(

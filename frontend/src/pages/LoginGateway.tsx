@@ -85,10 +85,7 @@ const LoginGateway = () => {
 
       setMfaSession(mfaData);
       setMfaStep(true);
-      if (mfaData.dev_otp) {
-        setMfaOtp(mfaData.dev_otp);
-      }
-      setStatusMsg(`${mfaData.message} (Test OTP: ${mfaData.dev_otp || '839201'})`);
+      setStatusMsg(`${mfaData.message}. Please check your registered email for the code.`);
     } catch (err: any) {
       setError(err.message || 'Authentication failed. Please verify credentials.');
     } finally {
@@ -104,7 +101,7 @@ const LoginGateway = () => {
     setLoading(true);
 
     try {
-      const authRes = await verifyMfa(mfaSession.session_id, mfaOtp.trim() || '839201');
+      const authRes = await verifyMfa(mfaSession.session_id, mfaOtp.trim());
       // Redirect based on user role
       if (authRes.user.user_type === 'GOVERNMENT') {
         navigate('/dashboard');
@@ -129,10 +126,7 @@ const LoginGateway = () => {
     try {
       const data = await personalSendOtp(citizenIdentifier);
       setCitizenSessionId(data.session_id);
-      if (data.dev_otp) {
-        setCitizenOtp(data.dev_otp);
-      }
-      setStatusMsg(data.dev_otp ? `OTP dispatched to ${citizenIdentifier}. (Dev OTP: ${data.dev_otp})` : `OTP dispatched to registered email/mobile for ${citizenIdentifier}. Please check your email inbox.`);
+      setStatusMsg(`Verification code dispatched via ViaSocket. Please check your email inbox.`);
     } catch (err: any) {
       setError(err.message || 'Failed to dispatch OTP.');
     } finally {

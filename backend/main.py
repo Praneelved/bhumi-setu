@@ -242,7 +242,7 @@ def government_login(req: GovLoginRequest, request: Request):
         session_id=otp_data["session_id"],
         masked_phone=masked,
         message=f"Statutory 2FA OTP dispatched to registered mobile {masked}",
-        dev_otp=None if IS_PRODUCTION else otp_data["dev_otp"]
+        dev_otp=None
     )
 
 @fastapi_app.post("/api/auth/agency/login", response_model=MFARequiredResponse)
@@ -292,7 +292,7 @@ def agency_login(req: AgencyLoginRequest, request: Request):
         session_id=otp_data["session_id"],
         masked_phone=masked,
         message=f"Agency 2FA OTP dispatched to authorized mobile {masked}",
-        dev_otp=None if IS_PRODUCTION else otp_data["dev_otp"]
+        dev_otp=None
     )
 
 @fastapi_app.post("/api/auth/mfa/verify", response_model=AuthTokenResponse)
@@ -369,7 +369,7 @@ def personal_send_otp(req: PersonalSendOtpRequest, request: Request):
     cursor.execute("""
     SELECT id, full_name, email, phone, user_type, role, organization_id, state, district, is_active
     FROM users 
-    WHERE (LOWER(email) = %s OR phone = ANY(%s) OR (LOWER(email) = 'praneelved17@gmail.com' AND %s = 'landowner@test.com')) 
+    WHERE (LOWER(email) = %s OR phone = ANY(%s) OR (LOWER(email) IN ('praneelved17@gmail.com', 'pranilved17@gmail.com') AND %s IN ('landowner@test.com', 'pranilved17@gmail.com', 'praneelved17@gmail.com'))) 
       AND user_type = 'PERSONAL' AND is_active = TRUE;
     """, (identifier.lower(), candidates, identifier.lower()))
     user = cursor.fetchone()
@@ -415,9 +415,9 @@ def personal_send_otp(req: PersonalSendOtpRequest, request: Request):
     return {
         "success": True,
         "session_id": otp_data["session_id"],
-        "message": f"Login OTP dispatched to {recipient_email}",
+        "message": f"Login OTP dispatched to {recipient_email}. Please check your email inbox.",
         "recipient_email": recipient_email,
-        "dev_otp": None if IS_PRODUCTION else otp_data["dev_otp"]
+        "dev_otp": None
     }
 
 @fastapi_app.post("/api/auth/personal/verify-otp", response_model=AuthTokenResponse)
