@@ -230,47 +230,57 @@ def send_viasocket_notification(
 
     payload = {
         "recipient": target_email,
-        "to": target_email,
-        "email": target_email,
         "otp": str(otp),
-        "code": str(otp),
-        "subject": subject,
-        "title": subject,
-        "body": msg,
-        "message": msg,
-        "content": msg,
-        "text": f"Your BhoomiSetu verification code is {otp}",
         "purpose": purpose,
         "user_name": user_name,
-        "name": user_name,
-        "system": "BhoomiSetu NLAMS"
+        "system": "BhoomiSetu NLAMS",
+        "to": target_email,
+        "email": target_email,
+        "subject": subject,
+        "body": msg,
+        "message": msg
     }
 
-    # Ensure both spellings (pranilved17@gmail.com and praneelved17@gmail.com) receive the OTP
-    recipients = [target_email]
-    if target_email.lower() == "pranilved17@gmail.com":
-        recipients.append("praneelved17@gmail.com")
-    elif target_email.lower() == "praneelved17@gmail.com":
-        recipients.append("pranilved17@gmail.com")
+    # Print clear diagnostic log in backend console for developer visibility
+    print(f"[viaSocket] 🔑 OTP for {target_email} ({purpose}): {otp}")
 
+    label = f"OTP to {target_email}"
     success = True
-    for email_addr in set(recipients):
-        p = dict(payload)
-        p["recipient"] = email_addr
-        p["to"] = email_addr
-        p["email"] = email_addr
-        label = f"OTP to {email_addr}"
-        if sync:
-            try:
-                res = requests.post(VIASOCKET_URL, json=p, timeout=5, verify=False)
-                print(f"[viaSocket {label}] Status {res.status_code} dispatched")
-                if res.status_code not in (200, 201, 202):
-                    success = False
-            except Exception as err:
-                print(f"[viaSocket {label} Error] {err}")
+    if sync:
+        try:
+            res = requests.post(VIASOCKET_URL, json=payload, timeout=5, verify=False)
+            print(f"[viaSocket {label}] Status {res.status_code} dispatched")
+            if res.status_code not in (200, 201, 202):
                 success = False
-        else:
-            _dispatch_async_post(VIASOCKET_URL, p, label)
+        except Exception as err:
+            print(f"[viaSocket {label} Error] {err}")
+            success = False
+    else:
+        _dispatch_async_post(VIASOCKET_URL, payload, label)
+
+    # Optional SMTP fallback if configured in environment
+    smtp_host = os.getenv("SMTP_HOST", "").strip()
+    smtp_user = os.getenv("SMTP_USER", "").strip()
+    smtp_pass = os.getenv("SMTP_PASS", os.getenv("SMTP_PASSWORD", "")).strip()
+    if smtp_host and smtp_user and smtp_pass:
+        try:
+            import smtplib
+            from email.mime.text import MIMEText
+            from email.utils import make_msgid, formatdate
+            smtp_port = int(os.getenv("SMTP_PORT", "587"))
+            mime = MIMEText(msg, "plain", "utf-8")
+            mime["Subject"] = subject
+            mime["From"] = os.getenv("SMTP_FROM", smtp_user)
+            mime["To"] = target_email
+            mime["Date"] = formatdate(localtime=True)
+            mime["Message-ID"] = make_msgid()
+            with smtplib.SMTP(smtp_host, smtp_port, timeout=5) as s:
+                s.starttls()
+                s.login(smtp_user, smtp_pass)
+                s.sendmail(mime["From"], [target_email], mime.as_string())
+            print(f"[SMTP Fallback] Directly delivered OTP email to {target_email}")
+        except Exception as s_err:
+            print(f"[SMTP Fallback Note] SMTP delivery: {s_err}")
 
     return success
 
