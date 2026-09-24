@@ -9,6 +9,7 @@ import {
   personalVerifyOtp,
   type MFAResponse
 } from '../services/api';
+import { BhoomiSetuLogo } from '../components/common/BhoomiSetuLogo';
 
 const LoginGateway = () => {
   const navigate = useNavigate();
@@ -163,17 +164,17 @@ const LoginGateway = () => {
         
         {/* Left Side - Sovereign Portal Info */}
         <div style={{ flex: '1', backgroundColor: 'var(--primary-container)', padding: 'var(--space-2xl)', color: 'var(--on-primary-container)', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)', marginBottom: 'var(--space-xl)' }}>
-            <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" alt="Emblem" style={{ height: '40px', filter: 'brightness(0) invert(1)' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)', marginBottom: 'var(--space-xl)' }}>
+            <BhoomiSetuLogo size={42} variant="white" />
             <div>
-              <p className="label-sm" style={{ color: 'var(--surface-dim)', margin: 0 }}>GOVERNMENT OF INDIA</p>
+              <p className="label-sm" style={{ color: 'var(--surface-dim)', margin: 0, letterSpacing: '0.05em' }}>NATIONAL LAND ACQUISITION SYSTEM</p>
               <h2 className="headline-lg" style={{ color: 'var(--on-primary)', margin: 0 }}>BhoomiSetu (भूमि सेतु)</h2>
             </div>
-            <span style={{ marginLeft: 'auto', backgroundColor: 'var(--secondary)', color: 'var(--on-secondary)', padding: '4px 8px', borderRadius: 'var(--radius)', fontSize: '11px', fontWeight: 600 }}>OFFICIAL</span>
+            <span style={{ marginLeft: 'auto', backgroundColor: 'var(--secondary)', color: 'var(--on-secondary)', padding: '4px 8px', borderRadius: 'var(--radius)', fontSize: '11px', fontWeight: 600 }}>SECURE</span>
           </div>
 
           <p className="body-lg" style={{ color: 'var(--surface-dim)', marginBottom: 'var(--space-2xl)' }}>
-            Official Government Portal for Land Acquisition & Compensation. Streamlined digital governance for transparent land records, approvals, and citizen compensation under the RFCTLARR Act, 2013.
+            Unified Digital Platform for Land Acquisition & Compensation. Streamlined digital governance for transparent land records, approvals, and citizen compensation under the RFCTLARR Act, 2013.
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xl)', marginBottom: 'auto' }}>

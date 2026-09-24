@@ -65,7 +65,7 @@ const Footer = () => {
         gap: 'var(--space-md)'
       }}>
         <p className="label-sm" style={{ color: 'var(--outline)', margin: 0 }}>
-          © 2026 National Informatics Centre (NIC), Government of India. All Rights Reserved.
+          © 2026 BhoomiSetu NLAMS · National Land Acquisition Management System. Smart India Hackathon Initiative.
         </p>
         <div style={{ display: 'flex', gap: 'var(--space-md)' }}>
           <a href="#" className="label-sm" style={{ color: 'var(--outline)', textDecoration: 'none' }}>Privacy Policy</a>

@@ -5,6 +5,7 @@ import { governmentAuth, verifyMFA, type MFAResponse } from '../services/authSer
 import OTPVerification from '../components/auth/OTPVerification';
 import OfflineBanner from '../components/ui/OfflineBanner';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import { BhoomiSetuLogo } from '../components/common/BhoomiSetuLogo';
 
 type Step = 'credentials' | 'mfa';
 
@@ -123,12 +124,8 @@ export const GovernmentLogin: React.FC = () => {
           textAlign: 'center',
           borderBottom: '4px solid #000f22'
         }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-            <img
-              src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg"
-              alt="Emblem of India"
-              style={{ height: '36px', filter: 'brightness(0) invert(1)' }}
-            />
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+            <BhoomiSetuLogo size={36} variant="white" />
             <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0, color: '#ffffff' }}>
               Government Verification Portal
             </h2>

@@ -1,53 +1,80 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
   <defs>
+    <!-- Background Gradient for Badge -->
     <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#0a2540" />
       <stop offset="100%" stop-color="#051626" />
     </linearGradient>
+
+    <!-- Bridge Arch Gradient -->
     <linearGradient id="bridgeGrad" x1="0%" y1="100%" x2="100%" y2="0%">
       <stop offset="0%" stop-color="#0066cc" />
       <stop offset="50%" stop-color="#0284c7" />
       <stop offset="100%" stop-color="#38bdf8" />
     </linearGradient>
+
+    <!-- Land / Bhoomi Gradient 1 (Forefront) -->
     <linearGradient id="landGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#10b981" />
       <stop offset="100%" stop-color="#047857" />
     </linearGradient>
+
+    <!-- Land / Bhoomi Gradient 2 (Background) -->
     <linearGradient id="landGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#34d399" />
       <stop offset="100%" stop-color="#059669" />
     </linearGradient>
+
+    <!-- Keystone / Gold Sun Gradient -->
     <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#fef08a" />
       <stop offset="50%" stop-color="#f59e0b" />
       <stop offset="100%" stop-color="#d97706" />
     </linearGradient>
+
+    <!-- Subtle Glow Shadow -->
+    <filter id="badgeShadow" x="-10%" y="-10%" width="120%" height="120%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#0a2540" flood-opacity="0.25" />
+    </filter>
   </defs>
 
-  <rect x="4" y="4" width="92" height="92" rx="22" fill="url(#bgGrad)" />
-  <rect x="5" y="5" width="90" height="90" rx="21" stroke="#38bdf8" stroke-opacity="0.3" stroke-width="2" />
+  <!-- Modern Shield / Hex-Squircle Container -->
+  <rect x="4" y="4" width="92" height="92" rx="22" fill="url(#bgGrad)" filter="url(#badgeShadow)" />
+  <rect x="5" y="5" width="90" height="90" rx="21" stroke="#38bdf8" stroke-opacity="0.2" stroke-width="1.5" />
 
+  <!-- Cadastral Land Plots (Bhoomi) -->
+  <!-- Left Terrace Plot -->
   <path d="M14 68 L36 60 L46 66 L20 78 Z" fill="url(#landGrad2)" opacity="0.85" />
+  
+  <!-- Right Terrace Plot -->
   <path d="M54 66 L64 60 L86 68 L76 78 Z" fill="url(#landGrad2)" opacity="0.85" />
 
+  <!-- Center Forward Cadastral Field -->
   <path d="M24 76 L50 67 L76 76 L50 86 Z" fill="url(#landGrad1)" />
   <path d="M24 76 L50 67 L50 86 Z" fill="#047857" opacity="0.3" />
-  <path d="M50 67 L50 86" stroke="#ffffff" stroke-width="1.2" stroke-dasharray="2 1.5" opacity="0.7" />
+  <!-- Field division / Survey boundary line -->
+  <path d="M50 67 L50 86" stroke="#ffffff" stroke-width="1" stroke-dasharray="2 1.5" opacity="0.7" />
 
+  <!-- The Bridge Arch (Setu) -->
+  <!-- Bridge Deck Roadway -->
   <path d="M14 62 Q50 56 86 62" stroke="#ffffff" stroke-width="3" stroke-linecap="round" />
   <path d="M14 62 Q50 56 86 62" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" />
 
+  <!-- Main Suspension Arch -->
   <path d="M18 62 C26 36 74 36 82 62" stroke="url(#bridgeGrad)" stroke-width="4.5" stroke-linecap="round" />
 
+  <!-- Suspension Cables / Vertical Pillars -->
   <line x1="32" y1="45" x2="32" y2="59.5" stroke="#93c5fd" stroke-width="1.5" stroke-linecap="round" opacity="0.8" />
   <line x1="41" y1="39.5" x2="41" y2="58" stroke="#93c5fd" stroke-width="1.5" stroke-linecap="round" opacity="0.8" />
   <line x1="50" y1="38" x2="50" y2="57.5" stroke="#93c5fd" stroke-width="1.5" stroke-linecap="round" opacity="0.8" />
   <line x1="59" y1="39.5" x2="59" y2="58" stroke="#93c5fd" stroke-width="1.5" stroke-linecap="round" opacity="0.8" />
   <line x1="68" y1="45" x2="68" y2="59.5" stroke="#93c5fd" stroke-width="1.5" stroke-linecap="round" opacity="0.8" />
 
+  <!-- Central Keystone / GIS Geospatial Marker Node (Saffron/Gold) -->
   <circle cx="50" cy="25" r="7.5" fill="url(#goldGrad)" />
   <circle cx="50" cy="25" r="3.5" fill="#ffffff" />
   
+  <!-- Subtle GIS Coordinate Crosshairs -->
   <line x1="50" y1="13" x2="50" y2="16" stroke="#fbbf24" stroke-width="1.5" stroke-linecap="round" />
   <line x1="50" y1="34" x2="50" y2="37" stroke="#fbbf24" stroke-width="1.5" stroke-linecap="round" />
   <line x1="38" y1="25" x2="41" y2="25" stroke="#fbbf24" stroke-width="1.5" stroke-linecap="round" />

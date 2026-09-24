@@ -1,5 +1,6 @@
 import React from 'react';
 import { ShieldCheck, Scale, MapPin, Landmark, FileCheck, Layers, Cpu, Users } from 'lucide-react';
+import { BhoomiSetuLogo } from '../components/common/BhoomiSetuLogo';
 
 const About = () => {
   return (
@@ -14,9 +15,9 @@ const About = () => {
         boxShadow: '0 4px 6px -1px rgba(10,37,64,0.1)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)', marginBottom: 'var(--space-md)' }}>
-          <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" alt="Emblem" style={{ height: '48px', filter: 'brightness(0) invert(1)' }} />
+          <BhoomiSetuLogo size={48} variant="white" />
           <div>
-            <span className="label-sm" style={{ color: 'var(--primary-fixed)', letterSpacing: '0.08em' }}>MINISTRY OF RURAL DEVELOPMENT & NATIONAL HIGHWAYS AUTHORITY</span>
+            <span className="label-sm" style={{ color: 'var(--primary-fixed)', letterSpacing: '0.08em' }}>SMART INDIA HACKATHON · NATIONAL LAND ACQUISITION INITIATIVE</span>
             <h1 className="headline-2xl" style={{ margin: '4px 0 0 0', color: 'white' }}>BhoomiSetu (भूमि सेतु)</h1>
           </div>
         </div>

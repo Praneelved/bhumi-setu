@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, Building2, User, ArrowRight, Lock } from 'lucide-react';
+import { BhoomiSetuLogo } from '../components/common/BhoomiSetuLogo';
 
 const loginOptions = [
   {
@@ -56,14 +57,10 @@ const LoginSelection: React.FC = () => {
             gap: 'var(--space-sm)',
             marginBottom: 'var(--space-md)',
           }}>
-            <img
-              src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg"
-              alt="Emblem of India"
-              style={{ height: '36px' }}
-            />
+            <BhoomiSetuLogo size={46} />
             <div style={{ textAlign: 'left' }}>
-              <p className="label-sm" style={{ color: 'var(--on-surface-variant)', margin: 0, textTransform: 'uppercase' }}>
-                Government of India
+              <p className="label-sm" style={{ color: 'var(--on-surface-variant)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                National Land Acquisition System
               </p>
               <h1 className="headline-lg" style={{ color: 'var(--primary)', margin: 0 }}>
                 BhoomiSetu (भूमि सेतु)
@@ -150,7 +147,7 @@ const LoginSelection: React.FC = () => {
         }}>
           <Lock size={12} color="var(--outline)" />
           <span className="label-sm" style={{ color: 'var(--on-surface-variant)' }}>
-            256-bit TLS Encrypted • Official NIC Portal
+            256-bit TLS Encrypted • BhoomiSetu Unified Portal
           </span>
         </div>
       </div>

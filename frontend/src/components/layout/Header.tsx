@@ -3,6 +3,7 @@ import { Search, ShieldCheck, UserCircle, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { clearAuthSession } from '../../services/api';
 import { getLoginForRole } from '../auth/authRouteUtils';
+import { BhoomiSetuLogo } from '../common/BhoomiSetuLogo';
 
 const Header = () => {
   const navigate = useNavigate();
@@ -44,11 +45,7 @@ const Header = () => {
       height: '80px'
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
-        <img 
-          src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" 
-          alt="Emblem of India" 
-          style={{ height: '48px' }} 
-        />
+        <BhoomiSetuLogo size={46} />
         <div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--space-xs)' }}>
             <h1 className="headline-lg" style={{ color: 'var(--primary)', margin: 0 }}>BhoomiSetu</h1>

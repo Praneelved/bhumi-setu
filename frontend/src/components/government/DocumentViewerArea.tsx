@@ -4,6 +4,7 @@ import {
   Plus, FileText, Download, RotateCcw, Check, Sparkles, Layers
 } from 'lucide-react';
 import type { VerificationDocument, DocumentPage } from '../../types/governmentVerification';
+import { BhoomiSetuLogo } from '../common/BhoomiSetuLogo';
 
 interface DocumentViewerAreaProps {
   document: VerificationDocument;
@@ -345,11 +346,9 @@ export const DocumentViewerArea: React.FC<DocumentViewerAreaProps> = ({
               paddingBottom: '16px',
               marginBottom: '24px'
             }}>
-              <img
-                src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg"
-                alt="Emblem of India"
-                style={{ height: '56px', marginBottom: '8px' }}
-              />
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
+                <BhoomiSetuLogo size={52} />
+              </div>
               <div style={{ fontSize: '13px', fontWeight: 700, color: '#0a2540', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                 GOVERNMENT OF MAHARASHTRA — REVENUE & LAND RECORDS DEPARTMENT
               </div>
